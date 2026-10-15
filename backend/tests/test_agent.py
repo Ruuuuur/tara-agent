@@ -171,6 +171,7 @@ class RepresentativeModel(AgentModel):
         question: str,
         plan: ToolPlan,
         result: dict[str, Any],
+        answer_language: str = "zh",
     ):
         assert result
         answer = f"已使用 {plan.tool_name.value} 回答：{question}"

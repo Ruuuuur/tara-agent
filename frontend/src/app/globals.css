@@ -903,3 +903,35 @@ tbody tr:hover td { background: #f5f9fc; }
   .trace-summary-grid, .span-facts, .trace-json-grid { grid-template-columns: 1fr; }
   .trace-live-status { width: 100%; justify-content: space-between; }
 }
+
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.language-toggle:hover { background: var(--accent-soft); }
+.language-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.auth-language { position: absolute; top: 20px; right: 24px; }
+.topbar-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .topbar-actions { gap: 6px; }
+  .language-toggle { padding: 7px 9px; }
+}
+.trace-page-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 20px; }
+.trace-page-toolbar .trace-back-link { margin-bottom: 0; }
+
+.auth-error span, .suggestion-error > span, .suggestion-inline-error,
+.session-feedback > span, .confirmation-dialog-error, .request-error,
+.trace-page-error, .trace-error-detail span, .span-error {
+  white-space: pre-line;
+}

@@ -10,7 +10,12 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from tara_agent.agent.gateway import AgentToolError
 from tara_agent.agent.graph import TaraAgent
-from tara_agent.agent.models import AgentResponse, AgentStreamEvent, ChatRequest
+from tara_agent.agent.models import (
+    AgentResponse,
+    AgentStreamEvent,
+    ChatRequest,
+    ConversationContext,
+)
 from tara_agent.agent.provider import AgentModelError
 from tara_agent.agent.runtime import PersistentAgentRun, PersistentAgentRunner
 from tara_agent.api.dependencies import CurrentUserDependency
@@ -49,9 +54,13 @@ async def chat(
     try:
         runner = _persistent_agent(request)
         if runner is not None:
-            return await runner.run(payload.question, user.id, payload.session_id)
+            return await runner.run(
+                payload.question, user.id, payload.session_id, payload.answer_language
+            )
         if _allow_ephemeral_execution(request):
-            return await _agent(request).run(payload.question)
+            return await _agent(request).run(
+                payload.question, ConversationContext(answer_language=payload.answer_language)
+            )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="数据库持久化服务不可用。",
@@ -91,7 +100,9 @@ async def chat_stream(
     runner = _persistent_agent(request)
     try:
         if runner is not None:
-            execution = await runner.start(payload.question, user.id, payload.session_id)
+            execution = await runner.start(
+                payload.question, user.id, payload.session_id, payload.answer_language
+            )
         elif not _allow_ephemeral_execution(request):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -113,7 +124,9 @@ async def chat_stream(
             stream = (
                 execution.stream()
                 if execution is not None
-                else agent.stream(payload.question)
+                else agent.stream(
+                    payload.question, ConversationContext(answer_language=payload.answer_language)
+                )
             )
             async for event in stream:
                 yield _sse(event)

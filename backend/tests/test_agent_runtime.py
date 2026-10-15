@@ -280,3 +280,28 @@ async def test_persistent_run_completes_without_a_tool_call() -> None:
     assert events[-1].response.tool is None
     assert repository.completed is True
     assert repository.failed is False
+
+
+@pytest.mark.anyio
+async def test_persistent_run_records_current_answer_language():
+    repository = RuntimeRepository()
+    run = StartedRun(
+        session_id=uuid4(),
+        trace_id=uuid4(),
+        user_message_id=uuid4(),
+        assistant_message_id=uuid4(),
+        started_at=datetime.now(UTC),
+    )
+    execution = PersistentAgentRun(
+        agent=cast(Any, DynamicWorkflowAgent()),
+        repository=cast(Any, repository),
+        run=run,
+        question="原始中文问题",
+        answer_language="en",
+    )
+    assert execution.context.answer_language == "en"
+    assert execution.question == "原始中文问题"
+    _ = [event async for event in execution.stream()]
+    root = next(span for span in repository.spans.values() if span.parent_span_id is None)
+    assert root.input_data["conversation_context"]["answer_language"] == "en"
+    assert root.input_data["question"] == "原始中文问题"

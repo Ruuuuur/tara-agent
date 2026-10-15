@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/language-provider";
+
 import { ChevronDown, Table2, Download } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
@@ -21,6 +23,7 @@ export type ResultRows = {
 };
 
 export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultRows, "key">) {
+  const { t, label: translateLabel } = useLanguage();
   const [open, setOpen] = useResponseCard();
   const [page, setPage] = useState(0);
   const pageSize = 100;
@@ -37,33 +40,31 @@ export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultR
       <summary>
         <Table2 size={18} />
         <ArtifactHeading title={label} scope={scope} sources={sources} />
-        <small>表 · {rows.length} 行</small>
+        <small>{t("表 · {0} 行", [rows.length])}</small>
         <ChevronDown size={16} />
       </summary>
       <div className="section-body">
         <div className="artifact-toolbar">
           {rows.every((row) => typeof row.header === "string" && typeof row.sequence === "string") && (
             <button type="button" className="artifact-download"
-              onClick={() => downloadFasta(rows, label)} aria-label="下载当前页核酸序列 FASTA">
-              <Download size={14} aria-hidden="true" />下载当前页 FASTA
-            </button>
+              onClick={() => downloadFasta(rows, label)} aria-label={t("下载当前页核酸序列 FASTA")}>
+              <Download size={14} aria-hidden="true" />{t("下载当前页 FASTA")}</button>
           )}
           <button
             type="button"
             className="artifact-download"
             onClick={() => downloadCsv(rows, label)}
-            aria-label={`下载${label}`}
+            aria-label={t("下载{0}", [label])}
           >
             <Download size={14} aria-hidden="true" />
-            下载 CSV
-          </button>
+            {t("下载 CSV")}</button>
         </div>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
                 {columns.map((column) => (
-                  <th key={column}>{humanize(column)}</th>
+                  <th key={column}>{translateLabel(humanize(column))}</th>
                 ))}
               </tr>
             </thead>
@@ -73,8 +74,8 @@ export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultR
                 <tr key={currentPage * pageSize + index}>
                   {columns.map((column) => (
                     <td key={column} data-column={column} title={typeof row[column] === "string" ? row[column] : undefined}>{column === "sequence" && typeof row[column] === "string"
-                      ? <details><summary>{row[column].length} 个碱基</summary><pre>{row[column]}</pre></details>
-                      : formatCell(column, row[column])}</td>
+                      ? <details><summary>{row[column].length} {t("个碱基")}</summary><pre>{row[column]}</pre></details>
+                      : formatCell(column, row[column], t)}</td>
                   ))}
                 </tr>
               ))}
@@ -84,10 +85,10 @@ export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultR
         {rows.length > pageSize && (
           <div className="artifact-toolbar">
             <button type="button" className="artifact-download" disabled={currentPage === 0}
-              onClick={() => setPage(currentPage - 1)}>上一页</button>
-            <span>第 {currentPage + 1} / {Math.ceil(rows.length / pageSize)} 页 · CSV 包含全部 {rows.length} 行</span>
+              onClick={() => setPage(currentPage - 1)}>{t("上一页")}</button>
+            <span>{t("第 {0} / {1} 页 · CSV 包含全部 {2} 行", [currentPage + 1, Math.ceil(rows.length / pageSize), rows.length])}</span>
             <button type="button" className="artifact-download" disabled={(currentPage + 1) * pageSize >= rows.length}
-              onClick={() => setPage(currentPage + 1)}>下一页</button>
+              onClick={() => setPage(currentPage + 1)}>{t("下一页")}</button>
           </div>
         )}
       </div>
@@ -284,26 +285,26 @@ function humanize(value: string): string {
   return value.replaceAll("_", " ");
 }
 
-function formatCell(column: string, value: unknown): ReactNode {
+function formatCell(column: string, value: unknown, t: (text: string) => string): ReactNode {
   if (column.endsWith("_band_mean_pattern") && typeof value === "string") {
     const patterns: Record<string, string> = {
       strictly_increasing: "三个带均值依次升高", strictly_decreasing: "三个带均值依次降低",
       non_monotonic_or_tied: "不严格单调或有相等值", incomplete: "有效纬度带不足",
     };
-    return patterns[value] ?? value;
+    return patterns[value] ? t(patterns[value]) : value;
   }
   if (column === "member_accessions" && Array.isArray(value)) {
-    return <details><summary>{value.length} 个 Pfam</summary><pre>{value.join(" · ")}</pre></details>;
+    return <details><summary>{value.length} {t("个 Pfam")}</summary><pre>{value.join(" · ")}</pre></details>;
   }
   if (typeof value === "number" && ["relative_contribution", "mean_sample_relative_signal",
     "reference_contribution", "allocation_fraction", "mapped_signal_fraction", "relative_signal",
     "x_fraction", "y_fraction"].includes(column)) {
     return `${(value * 100).toPrecision(5)}%`;
   }
-  return formatValue(value);
+  return formatValue(value, t);
 }
 
-function formatValue(value: unknown): ReactNode {
+function formatValue(value: unknown, t: (text: string) => string): ReactNode {
   if (value === null || value === undefined) {
     return <span className="null-value">NA</span>;
   }
@@ -313,20 +314,20 @@ function formatValue(value: unknown): ReactNode {
   if (typeof value === "boolean") {
     return value ? "Yes" : "No";
   }
-  if (value === "completed") return "已完成";
-  if (value === "blocked") return "未完成";
-  if (value === "partial") return "部分完成";
-  if (value === "PLS2_NIPALS_2_components_scaled_sample_sd_no_inference") return "PLS · 2成分 · 标准化 · 描述性关联";
-  if (value === "all_taxon_gene_signal") return "该采样组硅藻全部基因信号";
-  if (value === "retained_pfam_signal") return "该采样组保留 Pfam 信号";
-  if (value === "all_classified_LHC_signal_including_LHCr9Homolog") return "全部已分类 LHC 信号（含 LHCr9Homolog）";
-  if (value === "observed") return "有观测记录";
-  if (value === "missing") return "缺少记录";
-  if (value === "paper_zero_fill") return "作者脚本补零";
-  if (value === "environment") return "环境变量";
-  if (value === "response") return "功能信号";
-  if (value === "assigned") return "原始注释已命名";
-  if (value === "unresolved") return "未鉴定到所选层级";
+  if (value === "completed") return t("已完成");
+  if (value === "blocked") return t("未完成");
+  if (value === "partial") return t("部分完成");
+  if (value === "PLS2_NIPALS_2_components_scaled_sample_sd_no_inference") return t("PLS · 2成分 · 标准化 · 描述性关联");
+  if (value === "all_taxon_gene_signal") return t("该采样组硅藻全部基因信号");
+  if (value === "retained_pfam_signal") return t("该采样组保留 Pfam 信号");
+  if (value === "all_classified_LHC_signal_including_LHCr9Homolog") return t("全部已分类 LHC 信号（含 LHCr9Homolog）");
+  if (value === "observed") return t("有观测记录");
+  if (value === "missing") return t("缺少记录");
+  if (value === "paper_zero_fill") return t("作者脚本补零");
+  if (value === "environment") return t("环境变量");
+  if (value === "response") return t("功能信号");
+  if (value === "assigned") return t("原始注释已命名");
+  if (value === "unresolved") return t("未鉴定到所选层级");
   if (typeof value === "object") {
     return JSON.stringify(value);
   }

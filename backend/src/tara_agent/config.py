@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     data_service_url: str | None = None
     data_service_token_file: Path | None = None
     data_service_timeout_seconds: float = Field(default=120, gt=0, le=600)
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     deepseek_api_key: SecretStr | None = Field(
         default=None,
         validation_alias=AliasChoices("DEEPSEEK_API_KEY", "TARA_DEEPSEEK_API_KEY"),

@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/language-provider";
+
 import { ArrowDown, ArrowUp, List } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -11,6 +13,7 @@ type ConversationNavigationProps = {
 };
 
 export function ConversationNavigation({ items, onNavigate }: ConversationNavigationProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const navigationRef = useRef<HTMLElement>(null);
@@ -33,7 +36,7 @@ export function ConversationNavigation({ items, onNavigate }: ConversationNaviga
   }
 
   return (
-    <nav ref={navigationRef} className="conversation-navigation" aria-label="对话导航"
+    <nav ref={navigationRef} className="conversation-navigation" aria-label={t("对话导航")}
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
           event.stopPropagation();
@@ -41,14 +44,14 @@ export function ConversationNavigation({ items, onNavigate }: ConversationNaviga
           indexButtonRef.current?.focus();
         }
       }}>
-      <button type="button" title="回到顶部" aria-label="回到顶部"
+      <button type="button" title={t("回到顶部")} aria-label={t("回到顶部")}
         onClick={() => navigate("top")}><ArrowUp size={17} aria-hidden="true" /></button>
-      <button ref={indexButtonRef} type="button" title={`提问索引（${items.length} 条）`}
-        aria-label={`提问索引，共 ${items.length} 条`} aria-expanded={open} aria-controls={panelId}
+      <button ref={indexButtonRef} type="button" title={t("提问索引（{0} 条）", [items.length])}
+        aria-label={t("提问索引，共 {0} 条", [items.length])} aria-expanded={open} aria-controls={panelId}
         onClick={() => setOpen((current) => !current)}><List size={17} aria-hidden="true" /></button>
       {open ? (
-        <section id={panelId} className="prompt-index" aria-label="本次对话的提问索引">
-          <div className="prompt-index-heading">提问索引 <span>{items.length} 条</span></div>
+        <section id={panelId} className="prompt-index" aria-label={t("本次对话的提问索引")}>
+          <div className="prompt-index-heading">{t("提问索引")}<span>{items.length} {t("条")}</span></div>
           <ol>
             {items.map((item, index) => (
               <li key={item.id}>
@@ -65,7 +68,7 @@ export function ConversationNavigation({ items, onNavigate }: ConversationNaviga
           </ol>
         </section>
       ) : null}
-      <button type="button" title="回到底部并跟随新回答" aria-label="回到底部并跟随新回答"
+      <button type="button" title={t("回到底部并跟随新回答")} aria-label={t("回到底部并跟随新回答")}
         onClick={() => navigate("bottom")}><ArrowDown size={17} aria-hidden="true" /></button>
     </nav>
   );

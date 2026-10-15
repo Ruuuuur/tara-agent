@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/language-provider";
+
 import {
   BarChart3,
   Braces,
@@ -54,6 +56,7 @@ type QuestionSuggestionsProps = {
 };
 
 export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
+  const { t } = useLanguage();
   const [items, setItems] = useState<QuestionSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -115,24 +118,24 @@ export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
           className="suggestion-refresh"
           type="button"
           disabled={loading}
-          aria-label={loading ? "正在更新推荐问题" : "换一批推荐问题"}
+          aria-label={loading ? t("正在更新推荐问题") : t("换一批推荐问题")}
           aria-busy={loading}
           onClick={() => void refresh()}
         >
           <span className="suggestion-refresh-icon">
             <RefreshCw className={loading ? "spin" : undefined} size={18} aria-hidden="true" />
           </span>
-          <span aria-live="polite">{loading ? "正在更新" : "换一批问题"}</span>
+          <span aria-live="polite">{loading ? t("正在更新") : t("换一批问题")}</span>
         </button>
       </div>
-      {error && items.length > 0 ? <p className="suggestion-inline-error">{error}</p> : null}
+      {error && items.length > 0 ? <p className="suggestion-inline-error">{t(error)}</p> : null}
       {error && items.length === 0 ? (
         <div className="suggestion-error" role="status">
-          <span>{error}</span>
-          <button type="button" onClick={() => void refresh()}>重试</button>
+          <span>{t(error)}</span>
+          <button type="button" onClick={() => void refresh()}>{t("重试")}</button>
         </div>
       ) : (
-        <div className={`example-grid${loading ? " loading" : ""}`} aria-label="选择一个示例问题">
+        <div className={`example-grid${loading ? " loading" : ""}`} aria-label={t("选择一个示例问题")}>
           {items.length === 0
             ? Array.from({ length: 4 }, (_, index) => (
                 <div className="example-card-skeleton" key={index} aria-hidden="true" />
@@ -150,10 +153,10 @@ export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
                       <span className="example-card-heading">
                         <span className="example-card-label">
                           <Icon size={16} aria-hidden="true" />
-                          {item.category}
+                          {t(item.category)}
                         </span>
                         <span className={`example-task-badge ${item.task_type}`}>
-                          {taskLabels[item.task_type] ?? "数据检索"}
+                          {t(taskLabels[item.task_type] ?? "数据检索")}
                         </span>
                       </span>
                       <span className="example-card-question">{item.question}</span>
@@ -161,9 +164,9 @@ export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
                     <div className="example-data-details">
                       <div className="example-data-heading">
                         <Database size={14} aria-hidden="true" />
-                        涉及数据集（{item.datasets.length}）
+                        {t("涉及数据集（")}{item.datasets.length}）
                       </div>
-                      <div className="example-datasets" aria-label="涉及的数据集">
+                      <div className="example-datasets" aria-label={t("涉及的数据集")}>
                         {item.datasets.map((dataset) => (
                           <span className="example-dataset-chip" key={dataset} title={datasetLabels[dataset] ?? dataset}>
                             {datasetLabels[dataset] ?? dataset}
@@ -171,7 +174,7 @@ export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
                         ))}
                       </div>
                     </div>
-                    {item.limitation ? <p className="example-limitation">{item.limitation}</p> : null}
+                    {item.limitation ? <p className="example-limitation">{t(item.limitation)}</p> : null}
                   </article>
                 );
               })}

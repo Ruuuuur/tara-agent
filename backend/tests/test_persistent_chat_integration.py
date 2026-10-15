@@ -34,7 +34,7 @@ class FailingModel:
     async def plan(self, question, context, tools):
         raise AgentModelError("测试模型规划失败")
 
-    async def stream_answer(self, question, plan, result):
+    async def stream_answer(self, question, plan, result, answer_language="zh"):
         if False:
             yield ModelStreamDelta(kind="answer", content="")
 

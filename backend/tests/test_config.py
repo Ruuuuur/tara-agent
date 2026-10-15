@@ -42,3 +42,11 @@ def test_auth_cookie_is_secure_only_in_production() -> None:
 
     assert development.auth_cookie_secure is False
     assert production.auth_cookie_secure is True
+
+
+def test_local_frontend_origins_and_explicit_override() -> None:
+    settings = Settings(_env_file=None)
+    assert settings.cors_origins == ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    configured = Settings(cors_origins=["https://tara.example.org"], _env_file=None)
+    assert configured.cors_origins == ["https://tara.example.org"]

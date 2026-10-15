@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/language-provider";
+
 import { Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Config, Data, Layout } from "plotly.js";
@@ -12,6 +14,7 @@ type AnalysisChartProps = {
 };
 
 export function AnalysisChart({ chart }: AnalysisChartProps) {
+  const { t } = useLanguage();
   const chartRef = useRef<HTMLDivElement>(null);
   const plotlyRef = useRef<typeof import("plotly.js-dist-min").default | null>(null);
   const [ready, setReady] = useState(false);
@@ -32,7 +35,7 @@ export function AnalysisChart({ chart }: AnalysisChartProps) {
         const theme = chartTheme();
         await plotly.react(
           element,
-          chartData(chart, theme),
+          chartData(chart, theme, t),
           chartLayout(chart, theme),
           chartConfig,
         );
@@ -54,7 +57,7 @@ export function AnalysisChart({ chart }: AnalysisChartProps) {
       }
       plotlyRef.current = null;
     };
-  }, [chart]);
+  }, [chart, t]);
 
   useEffect(() => {
     const element = chartRef.current;
@@ -110,10 +113,10 @@ export function AnalysisChart({ chart }: AnalysisChartProps) {
           className="artifact-download"
           disabled={!ready || downloading}
           onClick={() => void handleDownload()}
-          aria-label={`下载图表 ${chart.title}`}
+          aria-label={t("下载图表 {0}", [chart.title])}
         >
           <Download size={14} aria-hidden="true" />
-          {downloading ? "正在下载" : "下载 PNG"}
+          {downloading ? t("正在下载") : t("下载 PNG")}
         </button>
       </div>
       <div className="analysis-chart-scroll">
@@ -122,9 +125,9 @@ export function AnalysisChart({ chart }: AnalysisChartProps) {
             : chart.kind === "correlation_circle" ? 620 : undefined }} aria-label={chart.title} />
       </div>
       {chart.kind === "correlation_circle" && (
-        <p className="chart-reading-note">标签引线指向原始变量点，文字位置不代表坐标；悬停查看坐标，完整数值见 PLS 变量相关坐标表。</p>
+        <p className="chart-reading-note">{t("标签引线指向原始变量点，文字位置不代表坐标；悬停查看坐标，完整数值见 PLS 变量相关坐标表。")}</p>
       )}
-      {error ? <p className="artifact-error" role="status">{error}</p> : null}
+      {error ? <p className="artifact-error" role="status">{t(error)}</p> : null}
     </>
   );
 }
@@ -161,12 +164,12 @@ function chartTheme(): ChartTheme {
   };
 }
 
-function chartData(chart: ChartSpec, theme: ChartTheme): Data[] {
+function chartData(chart: ChartSpec, theme: ChartTheme, t: (text: string) => string): Data[] {
   if (chart.kind === "horizontal_bar") {
     return [{ type: "bar", orientation: "h", x: chart.y, y: chart.x,
       customdata: chart.labels, text: chart.y.map((value) => `${(value * 100).toFixed(3)}%`),
       textposition: "outside", cliponaxis: false, marker: { color: theme.accent },
-      hovertemplate: "%{y}<br>%{customdata}<br>贡献 %{x:.3%}<extra></extra>" }];
+      hovertemplate: t("%{y}<br>%{customdata}<br>贡献 %{x:.3%}<extra></extra>") }];
   }
   if (chart.kind === "stacked_bar") {
     const palette = ["#286fa5", "#389b91", "#d58c35", "#925aa3", "#536a7b", "#c75c65", "#5c8d3b", "#6a77ba", "#af753d"];
@@ -185,12 +188,12 @@ function chartData(chart: ChartSpec, theme: ChartTheme): Data[] {
         x: indices.flatMap((i) => [0, Number(chart.x[i]), null]),
         y: indices.flatMap((i) => [0, chart.y[i], null]),
         line: { color, width: 1 }, opacity: 0.45, connectgaps: false },
-        { type: "scatter", mode: "markers", name: circleCategoryName(category),
+        { type: "scatter", mode: "markers", name: t(circleCategoryName(category)),
         legendgroup: category, showlegend: true,
         x: indices.map((i) => chart.x[i]), y: indices.map((i) => chart.y[i]),
         text: indices.map((i) => chart.labels[i]),
         marker: { size: 9, color },
-        hovertemplate: "%{text}<br>成分1: %{x:.3f}<br>成分2: %{y:.3f}<extra></extra>" }];
+        hovertemplate: t("%{text}<br>成分1: %{x:.3f}<br>成分2: %{y:.3f}<extra></extra>") }];
     });
   }
 
@@ -205,7 +208,7 @@ function chartData(chart: ChartSpec, theme: ChartTheme): Data[] {
         lon: chart.x as number[],
         lat: chart.y,
         text: chart.labels,
-        hovertemplate: "%{text}<br>经度 %{lon:.2f}<br>纬度 %{lat:.2f}<extra></extra>",
+        hovertemplate: t("%{text}<br>经度 %{lon:.2f}<br>纬度 %{lat:.2f}<extra></extra>"),
         marker: { color: diversity?.map((v) => v ?? 0) ?? theme.accent,
           colorscale: "Viridis", showscale: Boolean(diversity),
           colorbar: { title: { text: "exp(Shannon)" } },
@@ -224,7 +227,7 @@ function chartData(chart: ChartSpec, theme: ChartTheme): Data[] {
       hovertemplate: "%{y} × %{x}<br>ρ=%{z:.3f}<br>%{text}<extra></extra>" } as unknown as Data];
   }
   if (chart.kind === "ordination") {
-    return [{ type: "scatter", mode: "markers", name: "采样组", x: chart.x, y: chart.y, text: chart.labels,
+    return [{ type: "scatter", mode: "markers", name: t("采样组"), x: chart.x, y: chart.y, text: chart.labels,
       hovertemplate: "%{text}<br>NMDS1=%{x:.4g}<br>NMDS2=%{y:.4g}<extra></extra>" },
       ...(chart.series ?? []).map((s): Data => ({ type: "scatter", mode: "text+lines", name: s.name,
         x: s.x, y: s.y, text: ["", s.name], textposition: "top center",

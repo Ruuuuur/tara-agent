@@ -1,5 +1,7 @@
 "use client";
 
+import { LanguageToggle, useLanguage } from "@/components/language-provider";
+
 import {
   Activity, AlertTriangle, ArrowLeft, Bot, CheckCircle2, ChevronDown,
   Clock3, Database, FileJson, LoaderCircle, RotateCcw, Wrench,
@@ -33,6 +35,7 @@ const minTreeWidth = 25;
 const maxTreeWidth = 60;
 
 export function TraceWorkspace({ sessionId, initialTraceId }: TraceWorkspaceProps) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [selectedId, setSelectedId] = useState(initialTraceId);
@@ -106,24 +109,27 @@ export function TraceWorkspace({ sessionId, initialTraceId }: TraceWorkspaceProp
   return (
     <div className="trace-shell">
       <aside className="trace-list-panel">
-        <Link className="trace-back-link" href="/"><ArrowLeft size={15} />返回对话</Link>
+        <div className="trace-page-toolbar">
+        <Link className="trace-back-link" href="/"><ArrowLeft size={15} />{t("返回对话")}</Link>
+        <LanguageToggle />
+        </div>
         <div className="trace-list-heading">
-          <div><span className="context-label">当前会话</span><h1>链路追溯</h1></div>
-          <button type="button" onClick={() => { setLoadingList(true); setRefreshVersion((value) => value + 1); }} aria-label="刷新链路记录" title="刷新">
+          <div><span className="context-label">{t("当前会话")}</span><h1>{t("链路追溯")}</h1></div>
+          <button type="button" onClick={() => { setLoadingList(true); setRefreshVersion((value) => value + 1); }} aria-label={t("刷新链路记录")} title={t("刷新")}>
             <RotateCcw size={15} />
           </button>
         </div>
         <div className="trace-session-id">Session <code>{shortId(sessionId)}</code></div>
-        <div className="trace-list" aria-label="本会话的链路记录">
-          {loadingList ? <div className="trace-loading"><LoaderCircle className="spin" />正在加载…</div> : null}
-          {!loadingList && traces.length === 0 ? <div className="trace-empty">当前会话暂无链路记录。</div> : null}
+        <div className="trace-list" aria-label={t("本会话的链路记录")}>
+          {loadingList ? <div className="trace-loading"><LoaderCircle className="spin" />{t("正在加载…")}</div> : null}
+          {!loadingList && traces.length === 0 ? <div className="trace-empty">{t("当前会话暂无链路记录。")}</div> : null}
           {traces.map((trace, index) => (
             <button key={trace.id} type="button" className={trace.id === selectedId ? "active" : undefined} onClick={() => selectTrace(trace.id)}>
               <span className={`status-dot ${statusClass(trace.status)}`} aria-hidden="true" />
-              <strong>{trace.question ?? `第 ${traces.length - index} 次分析`}</strong>
+              <strong>{trace.question ?? t("第 {0} 次分析", [traces.length - index])}</strong>
               <small>
                 <time dateTime={trace.started_at}>{formatDateTime(trace.started_at)}</time>
-                <span>{trace.status === "running" ? "执行中" : formatDuration(trace.duration_ms)}</span>
+                <span>{trace.status === "running" ? t("执行中") : formatDuration(trace.duration_ms)}</span>
               </small>
             </button>
           ))}
@@ -131,11 +137,11 @@ export function TraceWorkspace({ sessionId, initialTraceId }: TraceWorkspaceProp
       </aside>
 
       <main className="trace-detail-panel">
-        {error ? <div className="trace-page-error"><AlertTriangle size={17} />{error}</div> : null}
-        {loadingDetail ? <div className="trace-detail-loading"><LoaderCircle className="spin" />正在读取链路详情…</div> : null}
+        {error ? <div className="trace-page-error"><AlertTriangle size={17} />{t(error)}</div> : null}
+        {loadingDetail ? <div className="trace-detail-loading"><LoaderCircle className="spin" />{t("正在读取链路详情…")}</div> : null}
         {!loadingDetail && detail ? <TraceDetailView key={detail.id} trace={detail} /> : null}
         {!loadingDetail && !detail && !error ? (
-          <div className="trace-detail-empty"><Activity size={28} /><span>选择一条链路查看执行详情</span></div>
+          <div className="trace-detail-empty"><Activity size={28} /><span>{t("选择一条链路查看执行详情")}</span></div>
         ) : null}
       </main>
     </div>
@@ -143,6 +149,7 @@ export function TraceWorkspace({ sessionId, initialTraceId }: TraceWorkspaceProp
 }
 
 function TraceDetailView({ trace }: { trace: TraceDetail }) {
+  const { t, label } = useLanguage();
   const tree = useMemo(() => buildTraceTree(trace.spans), [trace.spans]);
   const [selectedSpanId, setSelectedSpanId] = useState<string>();
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -185,34 +192,34 @@ function TraceDetailView({ trace }: { trace: TraceDetail }) {
   return (
     <div className="trace-detail-content">
       <header className="trace-detail-header">
-        <div><span className="context-label">TRACE {shortId(trace.id)}</span><h2>{trace.question ?? "未记录问题"}</h2></div>
+        <div><span className="context-label">TRACE {shortId(trace.id)}</span><h2>{trace.question ?? t("未记录问题")}</h2></div>
         <div className="trace-live-status">
-          {trace.status === "running" ? <span><LoaderCircle className="spin" size={13} />实时更新</span> : null}
+          {trace.status === "running" ? <span><LoaderCircle className="spin" size={13} />{t("实时更新")}</span> : null}
           <StatusBadge status={trace.status} />
         </div>
       </header>
 
-      <section className="trace-summary-grid" aria-label="链路摘要">
-        <SummaryItem label="开始时间" value={formatDateTime(trace.started_at)} />
-        <SummaryItem label="总耗时" value={traceDuration(trace)} />
-        <SummaryItem label="模型" value={trace.model_name ?? "未调用"} />
-        <SummaryItem label="工作流" value={trace.workflow_name} />
-        <SummaryItem label="数据集" value={sourceCountLabel(trace.data_sources)} />
-        <SummaryItem label="样本数" value={trace.sample_count?.toLocaleString() ?? "—"} />
-        <SummaryItem label="重试次数" value={String(trace.retry_count)} />
+      <section className="trace-summary-grid" aria-label={t("链路摘要")}>
+        <SummaryItem label={t("开始时间")} value={formatDateTime(trace.started_at)} />
+        <SummaryItem label={t("总耗时")} value={t(traceDuration(trace))} />
+        <SummaryItem label={t("模型")} value={trace.model_name ?? t("未调用")} />
+        <SummaryItem label={t("工作流")} value={trace.workflow_name} />
+        <SummaryItem label={t("数据集")} value={label(sourceCountLabel(trace.data_sources))} />
+        <SummaryItem label={t("样本数")} value={trace.sample_count?.toLocaleString() ?? "—"} />
+        <SummaryItem label={t("重试次数")} value={String(trace.retry_count)} />
         <SummaryItem label="Trace ID" value={shortId(trace.id)} mono />
       </section>
 
       <AnalysisOverview trace={trace} />
 
       {trace.error_message ? (
-        <section className="trace-error-detail"><AlertTriangle size={17} /><div><strong>{trace.error_code ?? "执行失败"}</strong><span>{trace.error_message}</span></div></section>
+        <section className="trace-error-detail"><AlertTriangle size={17} /><div><strong>{trace.error_code ?? t("执行失败")}</strong><span>{t(trace.error_message)}</span></div></section>
       ) : null}
 
       <TraceSection
         icon={<Activity size={17} />}
-        title="执行链路"
-        description={`${trace.spans.length} 个节点，按父子关系展示`}
+        title={t("执行链路")}
+        description={t("{0} 个节点，按父子关系展示", [trace.spans.length])}
       >
         {trace.spans.length > 0 ? (
           <div
@@ -220,7 +227,7 @@ function TraceDetailView({ trace }: { trace: TraceDetail }) {
             className={`trace-workbench${resizing ? " resizing" : ""}`}
             style={workbenchStyle}
           >
-            <div className="trace-tree" role="tree" aria-label="执行链路节点">
+            <div className="trace-tree" role="tree" aria-label={t("执行链路节点")}>
               {tree.map((node) => (
                 <TraceTreeBranch
                   key={node.span.id}
@@ -236,13 +243,13 @@ function TraceDetailView({ trace }: { trace: TraceDetail }) {
             <div
               className="trace-resizer"
               role="separator"
-              aria-label="调整执行树和节点详情的宽度"
+              aria-label={t("调整执行树和节点详情的宽度")}
               aria-orientation="vertical"
               aria-valuemin={minTreeWidth}
               aria-valuemax={maxTreeWidth}
               aria-valuenow={Math.round(treeWidth)}
               tabIndex={0}
-              title="拖动调整宽度，双击恢复默认宽度"
+              title={t("拖动调整宽度，双击恢复默认宽度")}
               onDoubleClick={() => setTreeWidth(defaultTreeWidth)}
               onKeyDown={handleResizeKey}
               onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
@@ -264,23 +271,24 @@ function TraceDetailView({ trace }: { trace: TraceDetail }) {
             />
             {selectedSpan ? <SpanDetail span={selectedSpan} /> : null}
           </div>
-        ) : <div className="trace-empty">执行节点尚未写入。</div>}
+        ) : <div className="trace-empty">{t("执行节点尚未写入。")}</div>}
       </TraceSection>
 
       <TraceSection
         className="trace-context-section"
         icon={<FileJson size={17} />}
-        title="请求与最终输出"
-        description="用于核对本次分析的完整结构化记录"
+        title={t("请求与最终输出")}
+        description={t("用于核对本次分析的完整结构化记录")}
         defaultOpen={false}
       >
-        <div className="trace-json-grid"><JsonBlock title="请求输入" value={trace.input_data} /><JsonBlock title="最终输出" value={trace.output_data} /></div>
+        <div className="trace-json-grid"><JsonBlock title={t("请求输入")} value={trace.input_data} /><JsonBlock title={t("最终输出")} value={trace.output_data} /></div>
       </TraceSection>
     </div>
   );
 }
 
 function AnalysisOverview({ trace }: { trace: TraceDetail }) {
+  const { t } = useLanguage();
   const toolSpans = trace.spans.filter((span) => (
     span.span_kind === "tool" || span.tool_name !== null
   ));
@@ -331,47 +339,47 @@ function AnalysisOverview({ trace }: { trace: TraceDetail }) {
   return (
     <TraceSection
       icon={<Database size={17} />}
-      title="分析记录"
-      description="问题理解、数据条件、分析方法与结论"
+      title={t("分析记录")}
+      description={t("问题理解、数据条件、分析方法与结论")}
     >
       <div className="trace-analysis-overview">
-        <div><span>问题理解</span><MarkdownContent content={understanding} /></div>
+        <div><span>{t("问题理解")}</span><MarkdownContent content={understanding} /></div>
         <div>
-          <span>数据与筛选</span>
+          <span>{t("数据与筛选")}</span>
           {sources.length ? (
             <DataSourceList sources={sources} />
-          ) : <p>尚未记录数据来源</p>}
+          ) : <p>{t("尚未记录数据来源")}</p>}
           {commonTags.length > 0 ? <div className="trace-filter-tags">{commonTags.map((tag) => (
-            <code key={tag.label} title={tag.detail}>{tag.label}：{tag.value}</code>
+            <code key={tag.label} title={tag.detail}>{t(tag.label)}: {tag.value}</code>
           ))}</div> : null}
-          {dataSteps.length > 0 ? <p className="trace-data-caption">各轮筛选与比较条件：</p> : null}
+          {dataSteps.length > 0 ? <p className="trace-data-caption">{t("各轮筛选与比较条件：")}</p> : null}
           <div className="trace-data-steps">
             {dataSteps.map((step) => (
               <div className="trace-filter-tags trace-data-step" key={step.id}>
-                <small>第 {step.round} 轮：</small>
+                <small>{t("第 {0} 轮：", [step.round])}</small>
                 {step.tags.filter((tag) => !commonTags.some((item) => item.label === tag.label && item.value === tag.value)).map((tag, index) => (
-                  <code key={`${tag.label}-${index}`} title={tag.detail}>{["信号层", "范围", "排名"].includes(tag.label) ? tag.value : `${tag.label}：${tag.value}`}</code>
+                  <code key={`${tag.label}-${index}`} title={tag.detail}>{["信号层", "范围", "排名"].includes(tag.label) ? tag.value : `${t(tag.label)}: ${tag.value}`}</code>
                 ))}
-                {step.tags.length === 0 ? <small>条件见节点详情</small> : null}
+                {step.tags.length === 0 ? <small>{t("条件见节点详情")}</small> : null}
               </div>
             ))}
           </div>
         </div>
         <div>
-          <span>分析方法</span>
+          <span>{t("分析方法")}</span>
           {methodCalls.length > 0 ? (
             <div className="trace-method-list">
               {methodCalls.map(({ name, round }) => (
                 <div className="trace-method-item" key={`${round}-${name}`}>
-                  <strong>第 {round} 轮调用</strong>
+                  <strong>{t("第 {0} 轮调用", [round])}</strong>
                   <code>{name}</code>
-                  <small>{toolLabel(name)}</small>
+                  <small>{t(toolLabel(name))}</small>
                 </div>
               ))}
             </div>
-          ) : <p>尚未调用分析工具</p>}
+          ) : <p>{t("尚未调用分析工具")}</p>}
         </div>
-        <div className="trace-conclusion"><span>分析结论</span><MarkdownContent content={conclusion} /></div>
+        <div className="trace-conclusion"><span>{t("分析结论")}</span><MarkdownContent content={conclusion} /></div>
       </div>
     </TraceSection>
   );
@@ -428,6 +436,7 @@ function TraceTreeBranch({
   onSelect: (spanId: string) => void;
   onToggle: (spanId: string) => void;
 }) {
+  const { t } = useLanguage();
   const { span, children } = node;
   const hasChildren = children.length > 0;
   const collapsed = collapsedIds.has(span.id);
@@ -449,8 +458,8 @@ function TraceTreeBranch({
             type="button"
             className={`trace-branch-toggle${collapsed ? " collapsed" : ""}`}
             onClick={() => onToggle(span.id)}
-            aria-label={`${collapsed ? "展开" : "收起"} ${span.name}`}
-            title={collapsed ? "展开子节点" : "收起子节点"}
+            aria-label={t("{0} {1}", [collapsed ? t("展开") : t("收起"), span.name])}
+            title={collapsed ? t("展开子节点") : t("收起子节点")}
           >
             <ChevronDown size={14} />
           </button>
@@ -459,11 +468,11 @@ function TraceTreeBranch({
           type="button"
           className={`trace-node-button${span.id === selectedSpanId ? " active" : ""}`}
           onClick={() => onSelect(span.id)}
-          title={span.name}
+          title={t(span.name)}
         >
           <span className={`trace-node-icon ${statusClass(span.status)}`}><Icon size={14} /></span>
-          <span className="trace-node-name"><strong>{span.name}</strong><small>{spanKindLabel(span.span_kind)}</small></span>
-          <span className="trace-node-time">{span.status === "running" ? "执行中" : formatDuration(span.duration_ms)}</span>
+          <span className="trace-node-name"><strong>{t(span.name)}</strong><small>{t(spanKindLabel(span.span_kind))}</small></span>
+          <span className="trace-node-time">{span.status === "running" ? t("执行中") : formatDuration(span.duration_ms)}</span>
         </button>
       </div>
       {hasChildren && !collapsed ? (
@@ -486,30 +495,31 @@ function TraceTreeBranch({
 }
 
 function SpanDetail({ span }: { span: TraceSpan }) {
+  const { t } = useLanguage();
   return (
     <article className="trace-node-detail">
-      <header><div><span>{spanKindLabel(span.span_kind)}</span><h3>{span.name}</h3></div><StatusBadge status={span.status} compact /></header>
+      <header><div><span>{t(spanKindLabel(span.span_kind))}</span><h3>{t(span.name)}</h3></div><StatusBadge status={span.status} compact /></header>
       <div className="span-facts">
-        <Fact label="开始时间" value={formatDateTime(span.started_at)} />
-        <Fact label="耗时" value={span.status === "running" ? "执行中" : formatDuration(span.duration_ms)} />
-        {span.model_name ? <Fact label="模型" value={span.model_name} /> : null}
-        {span.tool_name ? <Fact label="工具" value={span.tool_name} mono /> : null}
-        {span.total_tokens !== null ? <Fact label="Token" value={`${span.total_tokens.toLocaleString()}  输入 ${span.input_tokens ?? 0}  输出 ${span.output_tokens ?? 0}`} /> : null}
-        <Fact label="重试次数" value={String(span.retry_count)} />
+        <Fact label={t("开始时间")} value={formatDateTime(span.started_at)} />
+        <Fact label={t("耗时")} value={span.status === "running" ? t("执行中") : formatDuration(span.duration_ms)} />
+        {span.model_name ? <Fact label={t("模型")} value={span.model_name} /> : null}
+        {span.tool_name ? <Fact label={t("工具")} value={span.tool_name} mono /> : null}
+        {span.total_tokens !== null ? <Fact label="Token" value={t("{0}  输入 {1}  输出 {2}", [span.total_tokens.toLocaleString(), span.input_tokens ?? 0, span.output_tokens ?? 0])} /> : null}
+        <Fact label={t("重试次数")} value={String(span.retry_count)} />
       </div>
-      {Object.keys(span.filters).length > 0 ? <KeyValues title="筛选条件" value={span.filters} /> : null}
-      {span.marker ? <KeyValues title="分析对象" value={{ marker: span.marker }} /> : null}
-      {span.sample_count !== null ? <FactBlock label="样本数" value={span.sample_count.toLocaleString()} /> : null}
-      {span.sample_ids.length > 0 ? <FactBlock label="样本 ID" value={span.sample_ids.join("、")} /> : null}
+      {Object.keys(span.filters).length > 0 ? <KeyValues title={t("筛选条件")} value={span.filters} /> : null}
+      {span.marker ? <KeyValues title={t("分析对象")} value={{ marker: span.marker }} /> : null}
+      {span.sample_count !== null ? <FactBlock label={t("样本数")} value={span.sample_count.toLocaleString()} /> : null}
+      {span.sample_ids.length > 0 ? <FactBlock label={t("样本 ID")} value={span.sample_ids.join("、")} /> : null}
       {span.data_sources.length > 0 ? <SourceFiles sources={span.data_sources} /> : null}
-      {span.error_message ? <div className="span-error"><AlertTriangle size={15} />{span.error_message}</div> : null}
-      <div className="trace-json-grid"><JsonBlock title="节点输入" value={span.input_data} /><JsonBlock title="节点输出" value={span.output_data} /></div>
+      {span.error_message ? <div className="span-error"><AlertTriangle size={15} />{t(span.error_message)}</div> : null}
+      <div className="trace-json-grid"><JsonBlock title={t("节点输入")} value={span.input_data} /><JsonBlock title={t("节点输出")} value={span.output_data} /></div>
       <div className="trace-json-grid">
-        <JsonBlock title="模型参数" value={nonEmptyRecord(span.model_parameters)} />
-        <JsonBlock title="数据来源详情" value={span.data_sources.length > 0 ? { sources: span.data_sources } : null} />
-        <JsonBlock title="节点属性" value={nonEmptyRecord(span.attributes)} />
-        <JsonBlock title="错误详情" value={span.error_data} />
-        <JsonBlock title="分析产物" value={span.artifact_refs.length > 0 ? { artifacts: span.artifact_refs } : null} />
+        <JsonBlock title={t("模型参数")} value={nonEmptyRecord(span.model_parameters)} />
+        <JsonBlock title={t("数据来源详情")} value={span.data_sources.length > 0 ? { sources: span.data_sources } : null} />
+        <JsonBlock title={t("节点属性")} value={nonEmptyRecord(span.attributes)} />
+        <JsonBlock title={t("错误详情")} value={span.error_data} />
+        <JsonBlock title={t("分析产物")} value={span.artifact_refs.length > 0 ? { artifacts: span.artifact_refs } : null} />
       </div>
     </article>
   );
@@ -525,9 +535,10 @@ function FactBlock({ label, value }: { label: string; value: string }) {
   return <div className="span-fact-block"><strong>{label}</strong><span>{value}</span></div>;
 }
 function KeyValues({ title, value }: { title: string; value: Record<string, unknown> }) {
+  const { t } = useLanguage();
   const entries = summarizeFilterEntries(Object.entries(value));
   if (entries.length === 0) return null;
-  return <div className="span-key-values"><strong>{title}</strong><div>{entries.map((entry) => <code key={`${entry.key}-${entry.value}`}>{entry.label}：{entry.value}</code>)}</div></div>;
+  return <div className="span-key-values"><strong>{title}</strong><div>{entries.map((entry) => <code key={`${entry.key}-${entry.value}`}>{t(entry.label)}: {entry.value}</code>)}</div></div>;
 }
 function SourceFiles({ sources }: { sources: DataSource[] }) {
   const filenames = [...new Set(sources.map((source) => source.filename).filter((value): value is string => Boolean(value)))];
@@ -620,8 +631,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function StatusBadge({ status, compact = false }: { status: string; compact?: boolean }) {
+  const { t } = useLanguage();
   const Icon = status === "completed" ? CheckCircle2 : status === "failed" ? AlertTriangle : Clock3;
-  return <span className={`status-badge ${statusClass(status)}${compact ? " compact" : ""}`}><Icon size={compact ? 12 : 14} />{statusLabel(status)}</span>;
+  return <span className={`status-badge ${statusClass(status)}${compact ? " compact" : ""}`}><Icon size={compact ? 12 : 14} />{t(statusLabel(status))}</span>;
 }
 
 function buildTraceTree(spans: TraceSpan[]): TraceTreeNode[] {

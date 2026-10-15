@@ -131,3 +131,41 @@ async def test_chat_rejects_blank_or_oversized_questions(chat_app: FastAPI) -> N
 
     assert blank.status_code == 422
     assert oversized.status_code == 422
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("endpoint", ["/api/v1/chat", "/api/v1/chat/stream"])
+async def test_chat_passes_selected_language_without_rewriting_question(chat_app, endpoint):
+    model = chat_app.state.agent.model
+    observed = []
+    original_route = model.route
+    original_answer = model.stream_answer
+
+    async def route(question, context, tools):
+        observed.append(("route", question, context.answer_language))
+        return await original_route(question, context, tools)
+
+    async def answer(question, plan, result, answer_language="zh"):
+        observed.append(("answer", question, answer_language))
+        async for delta in original_answer(question, plan, result, answer_language):
+            yield delta
+
+    model.route = route
+    model.stream_answer = answer
+    async with AsyncClient(transport=ASGITransport(app=chat_app), base_url="http://test") as client:
+        response = await client.post(
+            endpoint, json={"question": "找一个 Tara 样本", "answer_language": "en"}
+        )
+    assert response.status_code == 200
+    assert observed == [("route", "找一个 Tara 样本", "en"), ("answer", "找一个 Tara 样本", "en")]
+    assert "[Final results]" in response.text
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("endpoint", ["/api/v1/chat", "/api/v1/chat/stream"])
+async def test_chat_rejects_unsupported_answer_language(chat_app, endpoint):
+    async with AsyncClient(transport=ASGITransport(app=chat_app), base_url="http://test") as client:
+        response = await client.post(
+            endpoint, json={"question": "找一个 Tara 样本", "answer_language": "fr"}
+        )
+    assert response.status_code == 422

@@ -635,7 +635,13 @@ class TaraAgent:
                     )
                 )
         if not records or time.monotonic() >= state["deadline"]:
-            answer = "【最终结果（部分完成）】\n\n" + (stop_message or "分析未获得工具结果。")
+            answer = (
+                "[Final results (partially completed)]\n\n"
+                "Analysis did not finish. "
+                "Completed tool results and diagnostic details are retained below."
+                if state["context"].answer_language == "en"
+                else "【最终结果（部分完成）】\n\n" + (stop_message or "分析未获得工具结果。")
+            )
             runtime.stream_writer(
                 AgentStreamEvent(event="answer_delta", delta=answer).model_dump(mode="json")
             )
@@ -649,8 +655,16 @@ class TaraAgent:
             )
         except (TimeoutError, AgentModelError, ValueError) as error:
             message = (
-                "【最终结果（部分完成）】\n\n"
-                f"回答汇总未完成；已完成的工具结果保留在下方。原因：{error or type(error).__name__}"
+                "[Final results (partially completed)]\n\n"
+                "The answer summary could not be completed. "
+                "Completed tool results are retained below. "
+                f"Reason: {error or type(error).__name__}"
+                if state["context"].answer_language == "en"
+                else (
+                    "【最终结果（部分完成）】\n\n"
+                    "回答汇总未完成；已完成的工具结果保留在下方。"
+                    f"原因：{error or type(error).__name__}"
+                )
             )
             result["status"] = "partial"
             result["stop_reason"] = message
@@ -833,10 +847,11 @@ class TaraAgent:
         writer(AgentStreamEvent(event="step", step=step).model_dump(mode="json"))
 
         reasoning_parts: list[str] = []
+        partial = state["result"].get("status") in {"partial", "blocked"}
         heading = (
-            "【最终结果（部分完成）】\n\n"
-            if state["result"].get("status") in {"partial", "blocked"}
-            else "【最终结果】\n\n"
+            ("[Final results (partially completed)]\n\n" if partial else "[Final results]\n\n")
+            if state["context"].answer_language == "en"
+            else ("【最终结果（部分完成）】\n\n" if partial else "【最终结果】\n\n")
         )
         answer_parts: list[str] = [heading]
         writer(AgentStreamEvent(event="answer_delta", delta=heading).model_dump(mode="json"))
@@ -849,6 +864,7 @@ class TaraAgent:
                 ObservationUpdate(
                     input_data={
                         "question": state["question"],
+                        "answer_language": state["context"].answer_language,
                         "plan": state["plan"].model_dump(mode="json", exclude={"usage"}),
                         "tool_result": state["result"],
                     },
@@ -861,6 +877,7 @@ class TaraAgent:
                 state["question"],
                 state["plan"],
                 state["result"],
+                answer_language=state["context"].answer_language,
             ):
                 if delta.kind == "usage":
                     answer_usage = delta.usage

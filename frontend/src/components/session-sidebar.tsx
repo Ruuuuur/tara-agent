@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/language-provider";
+
 import {
   Check,
   LoaderCircle,
@@ -45,6 +47,7 @@ export function SessionSidebar({
   onSelectSession,
   onSessionsDeleted,
 }: SessionSidebarProps) {
+  const { t } = useLanguage();
   const { user, signOut } = useAuth();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -260,31 +263,30 @@ export function SessionSidebar({
           type="button"
           onClick={onNewSession}
           disabled={disabled}
-          aria-label="新建对话"
+          aria-label={t("新建对话")}
         >
           <div className="brand-mark" aria-hidden="true"><Waves size={21} /></div>
           <div>
             <strong>Tara Agent</strong>
-            <span>海洋数据分析</span>
+            <span>{t("海洋数据分析")}</span>
           </div>
         </button>
       </div>
 
-      <nav className="primary-nav" aria-label="主要导航">
+      <nav className="primary-nav" aria-label={t("主要导航")}>
         <button type="button" onClick={onNewSession} disabled={disabled}>
           <Plus size={16} aria-hidden="true" />
-          新建对话
-        </button>
+          {t("新建对话")}</button>
       </nav>
 
-      <section className="session-history" aria-label="对话记录">
+      <section className="session-history" aria-label={t("对话记录")}>
         <div className="session-heading">
-          <p className="sidebar-label">对话记录</p>
+          <p className="sidebar-label">{t("对话记录")}</p>
           <div>
-            {loading ? <LoaderCircle className="spin" size={13} aria-label="正在加载" /> : null}
+            {loading ? <LoaderCircle className="spin" size={13} aria-label={t("正在加载")} /> : null}
             {!loading && sessions.length > 0 ? (
               <button type="button" onClick={toggleManaging} disabled={disabled || deleting}>
-                {managing ? "完成" : "管理"}
+                {managing ? t("完成") : t("管理")}
               </button>
             ) : null}
           </div>
@@ -292,7 +294,7 @@ export function SessionSidebar({
 
         {error ? (
           <div className="session-feedback">
-            <span>{error}</span>
+            <span>{t(error)}</span>
             <button
               type="button"
               onClick={() => {
@@ -301,16 +303,15 @@ export function SessionSidebar({
                 setRetryVersion((value) => value + 1);
               }}
             >
-              <RefreshCw size={13} />重新加载
-            </button>
+              <RefreshCw size={13} />{t("重新加载")}</button>
           </div>
         ) : null}
 
         {!loading && !error && sessions.length === 0 ? (
           <div className="session-empty">
             <MessageSquare size={18} aria-hidden="true" />
-            <strong>暂无历史对话</strong>
-            <span>完成一次分析后将显示在这里</span>
+            <strong>{t("暂无历史对话")}</strong>
+            <span>{t("完成一次分析后将显示在这里")}</span>
           </div>
         ) : null}
 
@@ -323,9 +324,9 @@ export function SessionSidebar({
               aria-pressed={selectedIds.size === sessions.length}
             >
               <Check size={13} aria-hidden="true" />
-              {selectedIds.size === sessions.length ? "取消全选" : "全选"}
+              {selectedIds.size === sessions.length ? t("取消全选") : t("全选")}
             </button>
-            <span>已选 {selectedIds.size} 个</span>
+            <span>{t("已选 {0} 个", [selectedIds.size])}</span>
             <button
               className="session-delete-button"
               type="button"
@@ -333,7 +334,7 @@ export function SessionSidebar({
               disabled={selectedIds.size === 0 || disabled || deleting}
             >
               {deleting ? <LoaderCircle className="spin" size={14} /> : <Trash2 size={14} />}
-              删除{selectedIds.size > 0 ? ` ${selectedIds.size}` : ""}
+              {t("删除")}{selectedIds.size > 0 ? ` ${selectedIds.size}` : ""}
             </button>
           </div>
         ) : null}
@@ -341,10 +342,10 @@ export function SessionSidebar({
         {sessions.length > 0 ? (
           <div className="session-list">
             {sessions.some((session) => session.pinned_at) ? (
-              <p className="session-group-label pinned">置顶</p>
+              <p className="session-group-label pinned">{t("置顶")}</p>
             ) : null}
             {sessions.some((session) => !session.pinned_at) ? (
-              <p className="session-group-label recent">最近</p>
+              <p className="session-group-label recent">{t("最近")}</p>
             ) : null}
             {sessions.map((session) => managing ? (
               <label
@@ -359,8 +360,8 @@ export function SessionSidebar({
                 />
                 <span>
                   <strong className="session-title">
-                    {session.pinned_at ? <Pin size={11} aria-label="已置顶" /> : null}
-                    <span>{session.title ?? "未命名对话"}</span>
+                    {session.pinned_at ? <Pin size={11} aria-label={t("已置顶")} /> : null}
+                    <span>{session.title ?? t("未命名对话")}</span>
                   </strong>
                   <time dateTime={session.updated_at}>{formatDateTime(session.updated_at)}</time>
                 </span>
@@ -375,14 +376,14 @@ export function SessionSidebar({
                   value={titleDraft}
                   onChange={(event) => setTitleDraft(event.target.value)}
                   maxLength={80}
-                  aria-label="会话名称"
+                  aria-label={t("会话名称")}
                   autoFocus
                   disabled={updatingSessionId === session.id}
                 />
                 <button
                   type="submit"
-                  aria-label="保存名称"
-                  title="保存"
+                  aria-label={t("保存名称")}
+                  title={t("保存")}
                   disabled={!titleDraft.trim() || updatingSessionId === session.id}
                 >
                   {updatingSessionId === session.id
@@ -391,8 +392,8 @@ export function SessionSidebar({
                 </button>
                 <button
                   type="button"
-                  aria-label="取消重命名"
-                  title="取消"
+                  aria-label={t("取消重命名")}
+                  title={t("取消")}
                   onClick={() => setEditingSessionId(undefined)}
                   disabled={updatingSessionId === session.id}
                 >
@@ -414,16 +415,16 @@ export function SessionSidebar({
                     aria-current={session.id === activeSessionId ? "page" : undefined}
                   >
                     <strong className="session-title">
-                      {session.pinned_at ? <Pin size={11} aria-label="已置顶" /> : null}
-                      <span>{session.title ?? "未命名对话"}</span>
+                      {session.pinned_at ? <Pin size={11} aria-label={t("已置顶")} /> : null}
+                      <span>{session.title ?? t("未命名对话")}</span>
                     </strong>
                     <time dateTime={session.updated_at}>{formatDateTime(session.updated_at)}</time>
                   </button>
                   <button
                     className="session-more"
                     type="button"
-                    aria-label="会话操作"
-                    title="会话操作"
+                    aria-label={t("会话操作")}
+                    title={t("会话操作")}
                     aria-expanded={menuSessionId === session.id}
                     onClick={() => setMenuSessionId((current) => (
                       current === session.id ? undefined : session.id
@@ -438,15 +439,14 @@ export function SessionSidebar({
                 {menuSessionId === session.id ? (
                   <div className="session-menu" role="menu">
                     <button type="button" role="menuitem" onClick={() => startRenaming(session)}>
-                      <Pencil size={14} />重命名
-                    </button>
+                      <Pencil size={14} />{t("重命名")}</button>
                     <button
                       type="button"
                       role="menuitem"
                       onClick={() => void togglePinned(session)}
                     >
                       {session.pinned_at ? <PinOff size={14} /> : <Pin size={14} />}
-                      {session.pinned_at ? "取消置顶" : "置顶"}
+                      {session.pinned_at ? t("取消置顶") : t("置顶")}
                     </button>
                     <button
                       className="danger"
@@ -454,8 +454,7 @@ export function SessionSidebar({
                       role="menuitem"
                       onClick={() => requestSessionDeletion(session)}
                     >
-                      <Trash2 size={14} />删除
-                    </button>
+                      <Trash2 size={14} />{t("删除")}</button>
                   </div>
                 ) : null}
               </div>
@@ -474,8 +473,8 @@ export function SessionSidebar({
           type="button"
           disabled={disabled || signingOut}
           onClick={() => setSignOutRequested(true)}
-          aria-label="退出登录"
-          title={disabled ? "请等待当前操作完成后退出登录" : "退出登录"}
+          aria-label={t("退出登录")}
+          title={disabled ? t("请等待当前操作完成后退出登录") : t("退出登录")}
         >
           <LogOut size={15} />
         </button>
@@ -484,9 +483,9 @@ export function SessionSidebar({
       {signOutRequested ? (
         <ConfirmationDialog
           titleId="sign-out-dialog-title"
-          title="退出登录？"
-          description="退出后将返回登录页面，当前账户中的会话数据不会被删除。"
-          confirmLabel="退出登录"
+          title={t("退出登录？")}
+          description={t("退出后将返回登录页面，当前账户中的会话数据不会被删除。")}
+          confirmLabel={t("退出登录")}
           confirmStyle="primary"
           busy={signingOut}
           onCancel={() => setSignOutRequested(false)}
@@ -497,14 +496,14 @@ export function SessionSidebar({
       {deleteRequest ? (
         <ConfirmationDialog
           titleId="delete-dialog-title"
-          title={deleteRequest.sessionIds.length === 1 ? "删除对话？" : "删除多个对话？"}
+          title={deleteRequest.sessionIds.length === 1 ? t("删除对话？") : t("删除多个对话？")}
           description={deleteRequest.sessionIds.length === 1 ? (
-            <>这会永久删除 <strong>“{deleteRequest.title}”</strong> 及其全部分析记录。</>
+            <>{t("这会永久删除")}<strong>“{deleteRequest.title}”</strong> {t("及其全部分析记录。")}</>
           ) : (
-            <>这会永久删除选中的 <strong>{deleteRequest.sessionIds.length} 个对话</strong> 及其全部分析记录。</>
+            <>{t("这会永久删除选中的")}<strong>{deleteRequest.sessionIds.length} {t("个对话")}</strong> {t("及其全部分析记录。")}</>
           )}
-          note="删除后无法恢复。"
-          confirmLabel="删除"
+          note={t("删除后无法恢复。")}
+          confirmLabel={t("删除")}
           confirmStyle="danger"
           busy={deleting}
           error={deleteError}
@@ -544,6 +543,7 @@ function ConfirmationDialog({
   onCancel,
   onConfirm,
 }: ConfirmationDialogProps) {
+  const { t } = useLanguage();
   const portalRoot = typeof document === "undefined" ? null : document.body;
   const layerRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
@@ -606,16 +606,15 @@ function ConfirmationDialog({
           {confirmStyle === "danger" ? <Trash2 size={22} /> : <LogOut size={22} />}
         </div>
         <h2 id={titleId}>{title}</h2>
-        <button className="confirmation-dialog-close" type="button" aria-label="关闭确认框"
+        <button className="confirmation-dialog-close" type="button" aria-label={t("关闭确认框")}
           onClick={onCancel} disabled={busy}><X size={20} /></button>
       </div>
       <p id={`${titleId}-description`}>{description}</p>
       {note ? <span>{note}</span> : null}
-      {error ? <div className="confirmation-dialog-error" role="alert">{error}</div> : null}
+      {error ? <div className="confirmation-dialog-error" role="alert">{t(error)}</div> : null}
       <footer>
         <button ref={cancelRef} type="button" onClick={onCancel} disabled={busy}>
-          取消
-        </button>
+          {t("取消")}</button>
         <button className={confirmStyle} type="button" onClick={onConfirm} disabled={busy}>
           {busy ? <LoaderCircle className="spin" size={15} /> : null}
           {confirmLabel}

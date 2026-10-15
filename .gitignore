@@ -54,6 +54,7 @@ Thumbs.db
 # Keep project plans local; track the project READMEs.
 *.md
 !/README.md
+!/启动步骤.md
 !backend/README.md
 !backend/RESEARCH_TASKS.md
 !frontend/README.md
@@ -74,3 +75,6 @@ opencode.json
 opencode.jsonc
 .opencode/
 AGENTS.md.backup.*
+
+# 前端消息回归测试的编译产物
+/frontend/.test-build/

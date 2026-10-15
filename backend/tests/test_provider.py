@@ -464,3 +464,25 @@ async def test_multistep_provider_rejects_invalid_decisions(values):
     model = model_with(FakeCompletions([tool_call("analysis_next_step", json.dumps(values))]))
     with pytest.raises(AgentModelError):
         await model.next_analysis_step("test", ConversationContext(), [], [], {})
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("language, expected", [("en", "English"), ("zh", "简体中文")])
+async def test_answer_language_overrides_base_prompt_and_keeps_scientific_input(language, expected):
+    completions = FakeStreamingCompletions([(None, "Answer")])
+    model = streaming_model_with(completions)
+    plan = ToolPlan(
+        tool_name=ToolName.FIND_SAMPLES, arguments={"query": {"limit": 1}}, rationale="查询样本"
+    )
+    result = {
+        "items": [{"sample_id": "TARA_TEST_001"}],
+        "metadata": {"source_datasets": ["context_general.tsv"]},
+    }
+    deltas = [delta async for delta in model.stream_answer("中文问题", plan, result, language)]
+    assert deltas[0].content == "Answer"
+    prompt = completions.request["messages"][0]["content"]
+    assert f"必须使用{expected}" in prompt
+    assert prompt.index("本轮语言要求") > prompt.index("回答应使用中文")
+    user_input = json.loads(completions.request["messages"][1]["content"])
+    assert user_input["question"] == "中文问题"
+    assert user_input["tool_result"]["returned_sample_records"][0]["sample_id"] == "TARA_TEST_001"

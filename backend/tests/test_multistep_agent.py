@@ -108,7 +108,7 @@ class SequenceModel:
             ],
         )
 
-    async def stream_answer(self, question, plan, result):
+    async def stream_answer(self, question, plan, result, answer_language="zh"):
         assert result["workflow"] == "multi_step"
         if self.failure == "answer_error":
             raise AgentModelError("汇总模型暂时不可用")
@@ -621,3 +621,25 @@ async def test_blocked_goal_keeps_independent_completed_result_as_partial(matou_
     assert "可靠样本映射" in response.result["stop_reason"]
     assert response.result["analysis_steps"][0]["result"]["items"]
     assert response.result["goal_checks"][1]["status"] == "blocked"
+
+
+@pytest.mark.anyio
+async def test_multistep_answer_receives_selected_language(matou_setup):
+    from tara_agent.agent.models import ConversationContext
+
+    agent, _, model = make_agent(matou_setup)
+    original = model.stream_answer
+    languages = []
+
+    async def answer(question, plan, result, answer_language="zh"):
+        languages.append(answer_language)
+        async for delta in original(question, plan, result, answer_language):
+            yield delta
+
+    model.stream_answer = answer
+    response = await agent.run(
+        "任选一个 MetaG 样本，分别计算两种候选条件。", ConversationContext(answer_language="en")
+    )
+    assert languages == ["en"]
+    assert response.answer.startswith("[Final results]")
+    assert response.result["workflow"] == "multi_step"

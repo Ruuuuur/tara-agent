@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/language-provider";
+
 import { ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 
@@ -13,6 +15,7 @@ export function ResponseCardGroup({ children, showControls = true }: {
   children: ReactNode;
   showControls?: boolean;
 }) {
+  const { t } = useLanguage();
   const [state, setState] = useState<CardState>({ cards: {} });
   const allOpen = state.defaultOpen ?? true;
 
@@ -24,14 +27,14 @@ export function ResponseCardGroup({ children, showControls = true }: {
       })),
     }}>
       {showControls ? (
-        <div className="response-card-controls" role="group" aria-label="本轮回复卡片控制">
+        <div className="response-card-controls" role="group" aria-label={t("本轮回复卡片控制")}>
           <button
             type="button"
-            aria-label={allOpen ? "折叠本轮全部卡片" : "展开本轮全部卡片"}
+            aria-label={allOpen ? t("折叠本轮全部卡片") : t("展开本轮全部卡片")}
             onClick={() => setState({ defaultOpen: !allOpen, cards: {} })}
           >
             {allOpen ? <ChevronsDownUp size={14} aria-hidden="true" /> : <ChevronsUpDown size={14} aria-hidden="true" />}
-            {allOpen ? "全部折叠" : "全部展开"}
+            {allOpen ? t("全部折叠") : t("全部展开")}
           </button>
         </div>
       ) : null}

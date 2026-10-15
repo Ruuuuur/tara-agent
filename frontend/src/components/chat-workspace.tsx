@@ -1,5 +1,7 @@
 "use client";
 
+import { LanguageToggle, useLanguage } from "@/components/language-provider";
+
 import {
   Activity,
   ChartNoAxesCombined,
@@ -30,7 +32,7 @@ import { ConversationNavigation } from "@/components/conversation-navigation";
 import { ResponseCardGroup, useResponseCard } from "@/components/response-card-group";
 import { QuestionSuggestions } from "@/components/question-suggestions";
 import { SessionSidebar } from "@/components/session-sidebar";
-import { apiBaseUrl, getSession } from "@/lib/api";
+import { apiBaseUrl, getSession, readApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import type {
   AgentResponse,
@@ -42,8 +44,13 @@ import type {
 
 const AnalysisChart = dynamic(
   () => import("@/components/analysis-chart").then((module) => module.AnalysisChart),
-  { ssr: false, loading: () => <div className="analysis-chart chart-loading">正在加载图表…</div> },
+  { ssr: false, loading: ChartLoading },
 );
+
+function ChartLoading() {
+  const { t } = useLanguage();
+  return <div className="analysis-chart chart-loading">{t("正在加载图表…")}</div>;
+}
 
 type Run = {
   id: string;
@@ -63,6 +70,7 @@ type Run = {
 };
 
 export function ChatWorkspace() {
+  const { language, t } = useLanguage();
   const [question, setQuestion] = useState("");
   const [runs, setRuns] = useState<Run[]>([]);
   const [sessionId, setSessionId] = useState<string>();
@@ -178,7 +186,7 @@ export function ChatWorkspace() {
     };
 
     try {
-      await streamQuestion(normalized, sessionId, handleEvent);
+      await streamQuestion(normalized, sessionId, handleEvent, language);
     } catch (error) {
       const message = error instanceof Error ? error.message : "请求失败";
       setRuns((current) =>
@@ -264,9 +272,11 @@ export function ChatWorkspace() {
         <header className="topbar">
           <div>
             <span className="context-label">Tara Agent</span>
-            <h1>海洋数据分析</h1>
+            <h1>{t("海洋数据分析")}</h1>
           </div>
-          {currentTraceHref ? (
+          <div className="topbar-actions">
+            <LanguageToggle />
+            {currentTraceHref ? (
             <Link
               className="topbar-trace-link"
               href={currentTraceHref}
@@ -274,13 +284,14 @@ export function ChatWorkspace() {
               rel={traceIsRunning ? "noopener noreferrer" : undefined}
             >
               <Activity size={15} aria-hidden="true" />
-              {traceIsRunning ? "查看实时链路" : "查看链路"}
+              {traceIsRunning ? t("查看实时链路") : t("查看链路")}
             </Link>
-          ) : null}
+            ) : null}
+          </div>
         </header>
 
         <div className={`conversation${!loadingSession && runs.length === 0 ? " conversation-empty" : ""}`} aria-live="polite">
-          {loadingSession ? <div className="workspace-loading"><LoaderCircle className="spin" />正在加载对话…</div> : null}
+          {loadingSession ? <div className="workspace-loading"><LoaderCircle className="spin" />{t("正在加载对话…")}</div> : null}
           {!loadingSession && runs.length === 0 ? <EmptyState onExample={submit} /> : null}
           {runs.map((run, index) => <AnalysisRun key={run.id} run={run} turn={index + 1} />)}
         </div>
@@ -305,13 +316,13 @@ export function ChatWorkspace() {
               }}
               maxLength={2000}
               rows={2}
-              placeholder="询问样本、分类群、丰度、多样性或环境关联…"
-              aria-label="输入 Tara 数据问题"
+              placeholder={t("询问样本、分类群、丰度、多样性或环境关联…")}
+              aria-label={t("输入 Tara 数据问题")}
             />
             <button className="send-button" type="submit" disabled={!canSubmit}
-              aria-label={busy ? "分析中" : "发送"}>
+              aria-label={busy ? t("分析中") : t("发送")}>
               {busy ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={18} />}
-              <span>{busy ? "分析中" : "发送"}</span>
+              <span>{busy ? t("分析中") : t("发送")}</span>
             </button>
           </form>
         </div>
@@ -329,6 +340,7 @@ function EmptyState({ onExample }: { onExample: (question: string) => Promise<vo
 }
 
 function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
+  const { t } = useLanguage();
   const inProgress = !run.historical && !run.response && !run.error;
   const reasoningActive = inProgress && !run.streamedAnswer;
   const answer = run.response?.answer ?? run.streamedAnswer;
@@ -337,7 +349,7 @@ function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
 
   return (
     <article className="analysis-run" id={`analysis-run-${run.id}`}
-      tabIndex={-1} aria-label={`第 ${turn} 轮对话`}>
+      tabIndex={-1} aria-label={t("第 {0} 轮对话", [turn])}>
       <UserMessage question={run.question} createdAt={run.createdAt} />
       <div className="agent-response">
         <div className={`agent-avatar${inProgress ? " running" : ""}`} aria-hidden="true">
@@ -366,7 +378,7 @@ function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
               />
             ) : null}
             {run.error ? (
-              <div className="request-error"><AlertTriangle size={17} />{run.error}</div>
+              <div className="request-error"><AlertTriangle size={17} />{t(run.error)}</div>
             ) : null}
             {run.response ? (
               <CompletedArtifacts
@@ -392,6 +404,7 @@ function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
 }
 
 function UserMessage({ question, createdAt }: { question: string; createdAt: string }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const resetTimer = useRef<number | null>(null);
 
@@ -424,8 +437,8 @@ function UserMessage({ question, createdAt }: { question: string; createdAt: str
             type="button"
             className="copy-message"
             onClick={() => void copyQuestion()}
-            aria-label={copied ? "已复制问题" : "复制问题"}
-            title={copied ? "已复制" : "复制问题"}
+            aria-label={copied ? t("已复制问题") : t("复制问题")}
+            title={copied ? t("已复制") : t("复制问题")}
           >
             {copied ? <Check size={13} /> : <Copy size={13} />}
           </button>
@@ -441,12 +454,13 @@ function SourceFiles({ sources }: { sources: string[] }) {
 }
 
 function HistoricalMeta({ run }: { run: Run }) {
+  const { t } = useLanguage();
   return (
     <footer className="provenance">
       <time dateTime={run.completedAt ?? run.createdAt}>
         {formatDateTime(run.completedAt ?? run.createdAt)}
       </time>
-      {run.model ? <span>模型 {run.model}</span> : null}
+      {run.model ? <span>{t("模型")}{run.model}</span> : null}
       {run.sources && run.sources.length > 0 ? (
         <SourceFiles sources={run.sources} />
       ) : null}
@@ -462,6 +476,7 @@ type ProcessPanelProps = {
 };
 
 function ProcessPanel({ steps, response, active, analysis }: ProcessPanelProps) {
+  const { t, label } = useLanguage();
   const serializedArguments = useMemo(
     () => response?.tool ? JSON.stringify(response.tool.arguments, null, 2) : "",
     [response],
@@ -470,22 +485,21 @@ function ProcessPanel({ steps, response, active, analysis }: ProcessPanelProps) 
     <DisclosureSection
       className={`process-panel${active ? " active" : ""}`}
       icon={active ? <LoaderCircle className="spin" size={16} /> : <Network size={16} />}
-      title={analysis ? "分析过程" : "处理过程"}
-      meta={active ? "正在进行" : `${response?.result.status === "partial" ? "部分完成 · " : ""}${steps.length} 个步骤`}
+      title={analysis ? t("分析过程") : t("处理过程")}
+      meta={active ? t("正在进行") : t("{0}{1} 个步骤", [response?.result.status === "partial" ? t("部分完成 · ") : "", steps.length])}
     >
       {steps.length > 0 ? (
         <ol>
-          {steps.map(processPresentation).map((step, index) => <li key={`${step.stage}-${index}`}><strong>{step.title}</strong><span>{step.detail}</span></li>)}
+          {steps.map(processPresentation).map((step, index) => <li key={`${step.stage}-${index}`}><strong>{label(step.title)}</strong><span>{label(step.detail)}</span></li>)}
         </ol>
       ) : (
         <p className="progress-placeholder">
-          正在理解问题
-          <span className="progress-dots" aria-hidden="true"><i /><i /><i /></span>
+          {t("正在理解问题")}<span className="progress-dots" aria-hidden="true"><i /><i /><i /></span>
         </p>
       )}
       {response?.tool ? (
         <div className="tool-call">
-          <span>调用工具</span><code>{response.tool.name}</code>
+          <span>{t("调用工具")}</span><code>{response.tool.name}</code>
           <pre>{serializedArguments}</pre>
         </div>
       ) : null}
@@ -494,6 +508,7 @@ function ProcessPanel({ steps, response, active, analysis }: ProcessPanelProps) 
 }
 
 function ReasoningPanel({ reasoning, active }: { reasoning: string; active: boolean }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useResponseCard(active);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -513,8 +528,8 @@ function ReasoningPanel({ reasoning, active }: { reasoning: string; active: bool
     >
       <summary>
         <BrainCircuit size={16} />
-        <span>{active ? "正在思考" : "模型思考"}</span>
-        <small>{active ? "实时生成" : "已完成"}</small>
+        <span>{active ? t("正在思考") : t("模型思考")}</span>
+        <small>{active ? t("实时生成") : t("已完成")}</small>
         <ChevronDown size={16} />
       </summary>
       <div className="section-body">
@@ -537,12 +552,13 @@ function AnswerPanel({
   analysis: boolean;
   incomplete?: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <DisclosureSection
       className="answer-panel"
       icon={<FileText size={16} />}
-      title={analysis ? "分析结论" : "回答"}
-      meta={active ? "正在生成" : incomplete ? "部分完成" : "已完成"}
+      title={analysis ? t("分析结论") : t("回答")}
+      meta={active ? t("正在生成") : incomplete ? t("部分完成") : t("已完成")}
     >
       <div className={active ? "streaming-answer" : undefined}>
         <MarkdownAnswer answer={answer} />
@@ -567,6 +583,7 @@ function CompletedArtifacts({
   response: AgentResponse;
   timestamp: string;
 }) {
+  const { t, label } = useLanguage();
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
   const tables = useMemo(() => findTables(response.result, response.sources), [response]);
   const choices = useMemo(() => artifactChoices(response, tables), [response, tables]);
@@ -583,8 +600,8 @@ function CompletedArtifacts({
     return (
       <DisclosureSection key={choice.id} className="chart-panel"
         icon={<ChartNoAxesCombined size={18} />}
-        title={<ArtifactHeading title={`${choice.resultRole === "intermediate" ? "【中间步骤结果】" : "【最终结果】"}${choice.label}`} {...chartSummary(chart, response)} />}
-        meta={chartKindLabels[chart.kind]}>
+        title={<ArtifactHeading title={t("{0}{1}", [choice.resultRole === "intermediate" ? t("【中间步骤结果】") : t("【最终结果】"), label(choice.label)])} {...chartSummary(chart, response)} />}
+        meta={t(chartKindLabels[chart.kind])}>
         <AnalysisChart chart={{ ...chart, title: choice.label }} />
       </DisclosureSection>
     );
@@ -595,13 +612,13 @@ function CompletedArtifacts({
         <DisclosureSection
           className="notes-panel"
           icon={<Info size={16} />}
-          title="数据说明"
-          meta={`${response.warnings.length} 项`}
+          title={t("数据说明")}
+          meta={t("{0} 项", [response.warnings.length])}
         >
           <div className="analysis-notes">
             {response.warnings.map((warning, index) => (
               <div key={`${warning.code}-${index}`}>
-                <strong>{warningTitle(warning.code)}</strong>
+                <strong>{t(warningTitle(warning.code))}</strong>
                 <span>{warning.message}</span>
               </div>
             ))}
@@ -611,36 +628,36 @@ function CompletedArtifacts({
 
       {groups.map((group, index) => (
         <section className="core-result-group" key={group} aria-label={group}>
-          {group !== "核心结果" ? <h3>{index + 1}. {group}</h3> : null}
+          {group !== "核心结果" ? <h3>{index + 1}. {t(group)}</h3> : null}
           {primary.filter((choice) => (choice.group ?? "核心结果") === group).map(renderArtifact)}
         </section>
       ))}
 
       <footer className="provenance">
         <time dateTime={timestamp}>{formatDateTime(timestamp)}</time>
-        <span>模型 {response.model}</span>
+        <span>{t("模型")}{response.model}</span>
         {response.tool || response.sources.length > 0 ? (
           <SourceFiles sources={response.sources} />
         ) : null}
       </footer>
       {extras.length > 0 ? (
         <div className="additional-artifacts">
-          <p>{primary.length ? "已展示核心结果。" : "本轮结果已保留。"}还需查看补充图表或中间步骤？勾选后在下方显示。</p>
+          <p>{primary.length ? t("已展示核心结果。") : t("本轮结果已保留。")}{t("还需查看补充图表或中间步骤？勾选后在下方显示。")}</p>
           <details className="artifact-picker">
-            <summary>选择更多结果（{extras.length} 项{selectedExtras.length ? `，已选 ${selectedExtras.length} 项` : ""}）</summary>
+            <summary>{t("选择更多结果（")}{extras.length} {t("项")}{selectedExtras.length ? t("，已选 {0} 项", [selectedExtras.length]) : ""}）</summary>
             <div className="artifact-picker-options">
               {extras.map((choice) => (
                 <label key={choice.id}>
                   <input type="checkbox" checked={selectedExtras.includes(choice.id)}
                     onChange={(event) => setSelectedExtras((current) => event.target.checked
                       ? [...current, choice.id] : current.filter((id) => id !== choice.id))} />
-                  <span>{choice.kind === "chart" ? "图" : "表"} · {choice.label}</span>
+                  <span>{choice.kind === "chart" ? t("图") : t("表")} · {label(choice.label)}</span>
                 </label>
               ))}
             </div>
           </details>
           {selectedExtras.length > 0 ? <button type="button" className="artifact-picker-clear"
-            onClick={() => setSelectedExtras([])}>收起所选补充结果</button> : null}
+            onClick={() => setSelectedExtras([])}>{t("收起所选补充结果")}</button> : null}
           <div className="selected-artifacts">
             {extras.filter((choice) => selectedExtras.includes(choice.id)).map(renderArtifact)}
           </div>
@@ -813,20 +830,16 @@ async function streamQuestion(
   question: string,
   sessionId: string | undefined,
   onEvent: (event: AgentStreamEvent) => void,
+  language: "zh" | "en",
 ) {
   const response = await fetch(`${apiBaseUrl}/api/v1/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     credentials: "include",
-    body: JSON.stringify({ question, session_id: sessionId }),
+    body: JSON.stringify({ question, session_id: sessionId, answer_language: language }),
   });
-  if (!response.ok || !response.body) {
-    if (response.status === 401) {
-      window.dispatchEvent(new Event("tara-auth-expired"));
-    }
-    const payload = await response.json().catch(() => null) as { detail?: string } | null;
-    throw new Error(payload?.detail ?? `请求失败（HTTP ${response.status}）`);
-  }
+  if (!response.ok) throw await readApiError(response);
+  if (!response.body) throw new Error("服务器未返回响应内容，请重试。");
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

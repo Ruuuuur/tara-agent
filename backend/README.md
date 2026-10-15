@@ -306,3 +306,8 @@ uv run python deploy/check_function_study.py --source paper_reference --normaliz
 ## 三个研究任务的扩展与服务器升级
 
 新增 `community_analysis` 和 `function_environment`，以及原 `function_study` 的显式分母选项。完整科学口径、前提、服务器资料准备和验收见 [RESEARCH_TASKS.md](RESEARCH_TASKS.md)。九个数据集仍在服务器，本机通过原 SSH 隧道调用；新工具不要求把原始数据下载到本机。科研代码变化必须同步服务端并重启两端后端，不能绕过代码或资料版本校验。
+
+
+## 回答语言
+
+`POST /api/v1/chat` 与 `POST /api/v1/chat/stream` 接受可选 `answer_language`，仅允许 `zh` 或 `en`，省略时默认 `zh`，非法值返回 422。该选项按本次请求传递给路由、规划和最终回答模型，优先于基础提示及历史消息中的语言；原问题、工具参数、科学数据和历史内容保持原文。语言记录在统一 Trace 的会话上下文和回答模型输入中，便于复核；不修改持久化结构。模型输出语言通过提示约束，不能视为额外的科学计算保证。

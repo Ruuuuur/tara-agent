@@ -13,7 +13,12 @@ from tara_agent.agent.conversation import (
     build_conversation_context,
 )
 from tara_agent.agent.graph import TaraAgent
-from tara_agent.agent.models import AgentResponse, AgentStreamEvent, ConversationMessage
+from tara_agent.agent.models import (
+    AgentResponse,
+    AgentStreamEvent,
+    AnswerLanguage,
+    ConversationMessage,
+)
 from tara_agent.agent.workflow import WorkflowTaskEvent
 from tara_agent.observability.contracts import ObservationKind, ObservationUpdate
 from tara_agent.observability.execution import TraceObservationEvent
@@ -29,7 +34,11 @@ class PersistentAgentRunner:
         self.repository = repository
 
     async def start(
-        self, question: str, user_id: str, session_id: UUID | None = None
+        self,
+        question: str,
+        user_id: str,
+        session_id: UUID | None = None,
+        answer_language: AnswerLanguage = "zh",
     ) -> PersistentAgentRun:
         model_provider = str(getattr(self.agent.model, "provider", "unknown"))
         model_parameters = dict(getattr(self.agent.model, "trace_parameters", {}))
@@ -48,12 +57,17 @@ class PersistentAgentRunner:
             repository=self.repository,
             run=run,
             question=question,
+            answer_language=answer_language,
         )
 
     async def run(
-        self, question: str, user_id: str, session_id: UUID | None = None
+        self,
+        question: str,
+        user_id: str,
+        session_id: UUID | None = None,
+        answer_language: AnswerLanguage = "zh",
     ) -> AgentResponse:
-        execution = await self.start(question, user_id, session_id)
+        execution = await self.start(question, user_id, session_id, answer_language)
         response: AgentResponse | None = None
         async for event in execution.stream():
             if event.event == "complete":
@@ -73,6 +87,7 @@ class PersistentAgentRun:
         repository: AgentRunRepository,
         run: StartedRun,
         question: str,
+        answer_language: AnswerLanguage = "zh",
     ) -> None:
         self.agent = agent
         self.repository = repository
@@ -95,7 +110,7 @@ class PersistentAgentRun:
             ),
             analysis_references,
             question=question,
-        )
+        ).model_copy(update={"answer_language": answer_language})
 
     async def stream(self) -> AsyncIterator[AgentStreamEvent]:
         recorder = TraceRecorder(self.repository, self.run_record.trace_id)

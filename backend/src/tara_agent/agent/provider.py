@@ -12,6 +12,7 @@ from tara_agent.agent.context import build_answer_model_input
 from tara_agent.agent.conversation import conversation_context_payload
 from tara_agent.agent.models import (
     AnalysisCapability,
+    AnswerLanguage,
     ConversationContext,
     ModelStreamDelta,
     ModelUsage,
@@ -69,6 +70,7 @@ class AgentModel(Protocol):
         question: str,
         plan: ToolPlan,
         result: dict[str, Any],
+        answer_language: AnswerLanguage = "zh",
     ) -> AsyncIterator[ModelStreamDelta]: ...
 
 
@@ -136,7 +138,13 @@ class DeepSeekChatModel:
             response = await self.client.chat.completions.create(
                 model=self.name,
                 messages=[
-                    {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
+                    {
+                        "role": "system",
+                        "content": (
+                            ROUTER_SYSTEM_PROMPT
+                            + _language_instruction(context.answer_language)
+                        ),
+                    },
                     {"role": "user", "content": user_content},
                 ],
                 tools=[
@@ -182,7 +190,13 @@ class DeepSeekChatModel:
             response = await self.client.chat.completions.create(
                 model=self.name,
                 messages=[
-                    {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
+                    {
+                        "role": "system",
+                        "content": (
+                            PLANNER_SYSTEM_PROMPT
+                            + _language_instruction(context.answer_language)
+                        ),
+                    },
                     {
                         "role": "user",
                         "content": json.dumps(
@@ -229,7 +243,7 @@ class DeepSeekChatModel:
         return await self._structured_decision(
             "select_analysis_workflow",
             WorkflowSelection,
-            WORKFLOW_SELECTOR_SYSTEM_PROMPT,
+            WORKFLOW_SELECTOR_SYSTEM_PROMPT + _language_instruction(context.answer_language),
             {
                 "question": question,
                 "context": conversation_context_payload(context),
@@ -241,7 +255,7 @@ class DeepSeekChatModel:
         return await self._structured_decision(
             "analysis_next_step",
             AnalysisDecision,
-            MULTI_STEP_SYSTEM_PROMPT,
+            MULTI_STEP_SYSTEM_PROMPT + _language_instruction(context.answer_language),
             {
                 "question": question,
                 "context": conversation_context_payload(context),
@@ -288,6 +302,7 @@ class DeepSeekChatModel:
         question: str,
         plan: ToolPlan,
         result: dict[str, Any],
+        answer_language: AnswerLanguage = "zh",
     ) -> AsyncIterator[ModelStreamDelta]:
         user_content = json.dumps(
             (
@@ -307,7 +322,10 @@ class DeepSeekChatModel:
             stream = await self.client.chat.completions.create(
                 model=self.name,
                 messages=[
-                    {"role": "system", "content": ANSWER_SYSTEM_PROMPT},
+                    {
+                        "role": "system",
+                        "content": ANSWER_SYSTEM_PROMPT + _language_instruction(answer_language),
+                    },
                     {"role": "user", "content": user_content},
                 ],
                 max_tokens=ANSWER_MAX_TOKENS,
@@ -420,4 +438,15 @@ def _model_usage(value: Any) -> ModelUsage | None:
         total_tokens=value.total_tokens,
         cached_tokens=getattr(prompt_details, "cached_tokens", None),
         reasoning_tokens=getattr(completion_details, "reasoning_tokens", None),
+    )
+
+
+def _language_instruction(language: AnswerLanguage) -> str:
+    """本轮语言选择优先于基础提示及历史消息中的语言。"""
+
+    name = "English" if language == "en" else "简体中文"
+    return (
+        f"\n本轮语言要求（优先于上述语言约定）：所有面向用户的 response、rationale 和最终回答"
+        f"必须使用{name}，即使问题或历史消息使用其他语言。"
+        "保留工具名、字段名、样本标识、数据集名、单位和科学数值原文。"
     )

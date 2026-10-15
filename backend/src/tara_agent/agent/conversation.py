@@ -86,6 +86,7 @@ def conversation_context_payload(context: ConversationContext) -> dict[str, Any]
     """生成模型可见的上下文，只在分析摘要中暴露可引用的 Trace ID。"""
 
     return {
+        "answer_language": context.answer_language,
         "messages": [
             {"role": message.role, "content": message.content} for message in context.messages
         ],
@@ -220,9 +221,10 @@ def planning_context(
     """向分析规划提供近期对话和路由明确选中的分析摘要。"""
 
     if decision.kind is not RouteKind.ANALYSIS:
-        return ConversationContext()
+        return ConversationContext(answer_language=context.answer_language)
     references_by_id = {reference.trace_id: reference for reference in context.analysis_references}
     return ConversationContext(
+        answer_language=context.answer_language,
         messages=context.messages,
         analysis_references=[
             references_by_id[trace_id] for trace_id in decision.analysis_reference_ids

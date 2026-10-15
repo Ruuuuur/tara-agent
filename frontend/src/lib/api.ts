@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "./api-error-detail";
 import type {
   AuthResponse,
   AuthUser,
@@ -71,7 +72,7 @@ export async function logout(): Promise<void> {
     credentials: "include",
   });
   if (!response.ok) {
-    throw await apiError(response);
+    throw await readApiError(response);
   }
 }
 
@@ -92,7 +93,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
     { method: "DELETE", credentials: "include" },
   );
   if (!response.ok) {
-    throw await apiError(response);
+    throw await readApiError(response);
   }
 }
 
@@ -104,7 +105,7 @@ export async function deleteSessions(sessionIds: string[]): Promise<SessionDelet
     body: JSON.stringify({ session_ids: sessionIds }),
   });
   if (!response.ok) {
-    throw await apiError(response);
+    throw await readApiError(response);
   }
   return response.json() as Promise<SessionDeleteResponse>;
 }
@@ -123,7 +124,7 @@ export async function updateSession(
     },
   );
   if (!response.ok) {
-    throw await apiError(response);
+    throw await readApiError(response);
   }
   return response.json() as Promise<SessionSummary>;
 }
@@ -163,7 +164,7 @@ async function requestJson<T>(path: string, signal?: AbortSignal): Promise<T> {
     signal,
   });
   if (!response.ok) {
-    throw await apiError(response);
+    throw await readApiError(response);
   }
   return response.json() as Promise<T>;
 }
@@ -203,15 +204,15 @@ async function sendJson<T>(
     signal,
   });
   if (!response.ok) {
-    throw await apiError(response);
+    throw await readApiError(response);
   }
   return response.json() as Promise<T>;
 }
 
-async function apiError(response: Response): Promise<ApiError> {
+export async function readApiError(response: Response): Promise<ApiError> {
   if (response.status === 401 && typeof window !== "undefined") {
     window.dispatchEvent(new Event("tara-auth-expired"));
   }
-  const payload = await response.json().catch(() => null) as { detail?: string } | null;
-  return new ApiError(payload?.detail ?? `请求失败（HTTP ${response.status}）`, response.status);
+  const payload: unknown = await response.json().catch(() => null);
+  return new ApiError(apiErrorMessage(payload, response.status), response.status);
 }

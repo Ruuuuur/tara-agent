@@ -1,5 +1,7 @@
 "use client";
 
+import { LanguageToggle, useLanguage } from "@/components/language-provider";
+
 import { AlertTriangle, LoaderCircle, LogIn, UserPlus, UserRound, Waves } from "lucide-react";
 import {
   createContext,
@@ -7,10 +9,12 @@ import {
   type ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
 import { ApiError, getCurrentUser, login, loginAsGuest, logout, register } from "@/lib/api";
+import { authValidationMessage, type AuthField } from "@/lib/auth-validation";
 import type { AuthUser } from "@/lib/types";
 
 type AuthContextValue = {
@@ -21,6 +25,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthGate({ children }: { children: ReactNode }) {
+  const { t } = useLanguage();
   const [user, setUser] = useState<AuthUser>();
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string>();
@@ -59,15 +64,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }, []);
 
   if (checking) {
-    return <div className="auth-loading"><LoaderCircle className="spin" />正在确认登录状态…</div>;
+    return <div className="auth-loading"><LanguageToggle /><LoaderCircle className="spin" />{t("正在确认登录状态…")}</div>;
   }
 
   if (error) {
     return (
       <div className="auth-loading auth-service-error">
+        <LanguageToggle />
         <AlertTriangle />
-        <strong>暂时无法连接后端服务</strong>
-        <span>{error}</span>
+        <strong>{t("暂时无法连接后端服务")}</strong>
+        <span>{t(error)}</span>
         <button
           type="button"
           onClick={() => {
@@ -75,8 +81,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             setRetryVersion((value) => value + 1);
           }}
         >
-          重新连接
-        </button>
+          {t("重新连接")}</button>
       </div>
     );
   }
@@ -106,6 +111,7 @@ export function useAuth(): AuthContextValue {
 }
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => void }) {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -113,9 +119,28 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [loginRejected, setLoginRejected] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function validateInput(input: HTMLInputElement, field: AuthField) {
+    input.setCustomValidity("");
+    input.setCustomValidity(authValidationMessage(field, input, t));
+  }
+
+  useEffect(() => {
+    // 切换语言时更新已有校验提示，不重新提交表单，也不清空输入。
+    for (const input of formRef.current?.querySelectorAll("input") ?? []) {
+      if (!input.validity.customError) continue;
+      input.setCustomValidity("");
+      input.setCustomValidity(authValidationMessage(input.name as AuthField, input, t));
+    }
+  }, [t, mode]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    for (const input of event.currentTarget.querySelectorAll("input")) {
+      validateInput(input, input.name as AuthField);
+    }
+    if (!event.currentTarget.reportValidity()) return;
     setBusy(true);
     setError(undefined);
     setLoginRejected(false);
@@ -156,21 +181,25 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => 
 
   return (
     <main className="auth-page">
+      <div className="auth-language"><LanguageToggle /></div>
       <section className="auth-card">
         <div className="auth-brand-mark"><Waves size={25} /></div>
         <span className="context-label">Tara Agent</span>
-        <h1>{mode === "login" ? "登录 Tara Agent" : "创建账户"}</h1>
+        <h1>{mode === "login" ? t("登录 Tara Agent") : t("创建账户")}</h1>
 
-        <div className="auth-tabs" role="tablist" aria-label="认证方式">
-          <button type="button" className={mode === "login" ? "active" : undefined} onClick={() => switchMode("login")}>登录</button>
-          <button type="button" className={mode === "register" ? "active" : undefined} onClick={() => switchMode("register")}>注册</button>
+        <div className="auth-tabs" role="tablist" aria-label={t("认证方式")}>
+          <button type="button" className={mode === "login" ? "active" : undefined} onClick={() => switchMode("login")}>{t("登录")}</button>
+          <button type="button" className={mode === "register" ? "active" : undefined} onClick={() => switchMode("register")}>{t("注册")}</button>
         </div>
 
-        <form className="auth-form" onSubmit={submit}>
+        <form ref={formRef} className="auth-form" onSubmit={submit}>
           {mode === "register" ? (
             <label>
-              <span>昵称</span>
+              <span>{t("昵称")}</span>
               <input
+                name="display_name"
+                onInvalid={(event) => validateInput(event.currentTarget, "display_name")}
+                onInput={(event) => event.currentTarget.setCustomValidity("")}
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 minLength={1}
@@ -181,18 +210,13 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => 
             </label>
           ) : null}
           <label>
-            <span>邮箱</span>
+            <span>{t("邮箱")}</span>
             <input
+              name="email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              onInvalid={(event) => {
-                event.currentTarget.setCustomValidity(
-                  event.currentTarget.validity.valueMissing
-                    ? "请输入邮箱"
-                    : "请输入正确的邮箱地址",
-                );
-              }}
+              onInvalid={(event) => validateInput(event.currentTarget, "email")}
               onInput={(event) => event.currentTarget.setCustomValidity("")}
               maxLength={320}
               autoComplete="email"
@@ -200,8 +224,11 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => 
             />
           </label>
           <label>
-            <span>密码</span>
+            <span>{t("密码")}</span>
             <input
+              name="password"
+              onInvalid={(event) => validateInput(event.currentTarget, "password")}
+              onInput={(event) => event.currentTarget.setCustomValidity("")}
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -210,24 +237,23 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => 
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               required
             />
-            {mode === "register" ? <small>至少 12 个字符</small> : null}
+            {mode === "register" ? <small>{t("至少 12 个字符")}</small> : null}
           </label>
           {error ? (
             <div className="auth-error">
               <AlertTriangle size={15} />
               <div>
-                <span>{error}</span>
+                <span>{t(error)}</span>
                 {loginRejected ? (
                   <button type="button" onClick={() => switchMode("register")}>
-                    尚未注册？前往注册
-                  </button>
+                    {t("尚未注册？前往注册")}</button>
                 ) : null}
               </div>
             </div>
           ) : null}
           <button className="auth-submit" type="submit" disabled={busy}>
             <AuthSubmitIcon busy={busy} mode={mode} />
-            {busy ? "正在处理…" : mode === "login" ? "登录" : "创建并登录"}
+            {busy ? t("正在处理…") : mode === "login" ? t("登录") : t("创建并登录")}
           </button>
         </form>
 
@@ -235,8 +261,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => 
           <div className="guest-entry">
             <button type="button" onClick={() => void enterAsGuest()} disabled={busy}>
               {busy ? <LoaderCircle className="spin" size={17} /> : <UserRound size={17} />}
-              游客进入
-            </button>
+              {t("游客进入")}</button>
           </div>
         ) : null}
       </section>

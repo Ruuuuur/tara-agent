@@ -88,11 +88,15 @@ class AnalysisReference(BaseModel):
     sources: list[str] = Field(default_factory=list, max_length=20)
 
 
+AnswerLanguage = Literal["zh", "en"]
+
+
 class ConversationContext(BaseModel):
     """经过长度限制的会话上下文。"""
 
     model_config = ConfigDict(extra="forbid")
 
+    answer_language: AnswerLanguage = "zh"
     messages: list[ConversationMessage] = Field(default_factory=list, max_length=8)
     analysis_references: list[AnalysisReference] = Field(default_factory=list)
 
@@ -263,6 +267,7 @@ class ChatRequest(BaseModel):
 
     question: str = Field(min_length=1, max_length=2_000)
     session_id: UUID | None = None
+    answer_language: AnswerLanguage = "zh"
 
     @field_validator("question")
     @classmethod

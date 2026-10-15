@@ -354,3 +354,22 @@ def _analysis_reference(question: str) -> AnalysisReference:
         tool_arguments={"query": {}},
         result_summary={"page": {"total": 1}},
     )
+
+
+def test_language_survives_context_selection_and_is_not_inherited_from_history():
+    context = ConversationContext(
+        answer_language="en",
+        messages=[ConversationMessage(role="assistant", content="历史中文回答")],
+    )
+    decision = RouteDecision(
+        kind="analysis",
+        rationale="分析",
+        response="",
+        capability_requirements=[],
+        analysis_reference_ids=[],
+    )
+    selected = planning_context(context, decision)
+    assert selected.answer_language == "en"
+    assert selected.messages[0].content == "历史中文回答"
+    assert conversation_context_payload(selected)["answer_language"] == "en"
+    assert ConversationContext().answer_language == "zh"

@@ -303,7 +303,7 @@ class ComplexFunctionModel:
             ],
         )
 
-    async def stream_answer(self, question, plan, result):
+    async def stream_answer(self, question, plan, result, answer_language="zh"):
         yield ModelStreamDelta(kind="answer", content="已完成总体排名和对应编码的相对贡献比较。")
 
 
