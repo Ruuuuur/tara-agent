@@ -16,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { getQuestionSuggestions } from "@/lib/api";
+import { translateSuggestionQuestion } from "@/lib/suggestion-question";
 import type { QuestionSuggestion } from "@/lib/types";
 
 const categoryIcons = {
@@ -56,7 +57,7 @@ type QuestionSuggestionsProps = {
 };
 
 export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [items, setItems] = useState<QuestionSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -142,13 +143,14 @@ export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
               ))
             : items.map((item) => {
                 const Icon = categoryIcons[item.category as keyof typeof categoryIcons] ?? Lightbulb;
+                const question = translateSuggestionQuestion(item.question, language);
                 return (
                   <article className="example-card" key={item.id}>
                     <button
                       className="example-question-button"
                       type="button"
                       disabled={loading || item.availability === "planned"}
-                      onClick={() => void onSelect(item.question)}
+                      onClick={() => void onSelect(question)}
                     >
                       <span className="example-card-heading">
                         <span className="example-card-label">
@@ -159,7 +161,7 @@ export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
                           {t(taskLabels[item.task_type] ?? "数据检索")}
                         </span>
                       </span>
-                      <span className="example-card-question">{item.question}</span>
+                      <span className="example-card-question">{question}</span>
                     </button>
                     <div className="example-data-details">
                       <div className="example-data-heading">
