@@ -34,6 +34,7 @@ import { processPresentation } from "@/lib/process-presentation";
 import { ConversationNavigation } from "@/components/conversation-navigation";
 import { ResponseCardGroup, useResponseCard } from "@/components/response-card-group";
 import { QuestionSuggestions } from "@/components/question-suggestions";
+import { ProjectIntro } from "@/components/project-intro";
 import { SessionSidebar } from "@/components/session-sidebar";
 import { apiBaseUrl, getSession, readApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
@@ -335,8 +336,13 @@ export function ChatWorkspace() {
 }
 
 function EmptyState({ onExample }: { onExample: (question: string) => Promise<void> }) {
+  const { t } = useLanguage();
   return (
     <section className="empty-state">
+      <details className="workspace-intro">
+        <summary>{t("5 分钟上手 Tara Agent")}<ChevronDown size={16} aria-hidden="true" /></summary>
+        <ProjectIntro variant="workspace" />
+      </details>
       <QuestionSuggestions onSelect={onExample} />
     </section>
   );
