@@ -104,7 +104,8 @@ export function ChatWorkspace() {
   }, []);
 
   useEffect(() => {
-    if (!followOutput.current) {
+    // 空会话没有待跟随的回答，避免手机首页和新建对话被拉到底部。
+    if (runs.length === 0 || !followOutput.current) {
       return;
     }
     const frame = requestAnimationFrame(() => {

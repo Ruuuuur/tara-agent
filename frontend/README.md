@@ -4,6 +4,8 @@
 
 ## 首页导览
 
+空会话不触发回答自动跟随滚动，手机首页和新建对话保持在页面顶部；提交问题后继续沿用回答跟随规则。
+
 登录页和新对话空白页介绍 Tara Oceans 数据背景、当前可用的分析类型和三步入门方法。新用户可以登录或以游客身份进入，选择示例问题，也可以直接输入研究问题；查看结果时应阅读数据说明，并可打开分析链路核对来源与执行步骤。
 
 首页提供 Tara Oceans 航次介绍与 Ocean Gene Atlas 的外部链接。Ocean Gene Atlas 是独立网站，不是 Tara Agent 的内置工具或本次分析的数据来源。介绍内容位于 `src/components/project-intro.tsx`，中英文文案位于 `src/lib/ui-translations.ts`，页面布局位于 `src/app/globals.css`。
@@ -112,3 +114,5 @@ TARA_AUDIT_URL=http://localhost:3000 node scripts/test-ui-i18n.cjs
 可设置 `TARA_AUDIT_CONTENT_LANGUAGE=zh` 专测中文回答内容在切换及历史恢复后不变；该模式不运行英文残留扫描，因为中文生成内容应当保留。默认 `en` 同时进行英文残留检查和内容不变检查。
 
 可通过 `TARA_PLAYWRIGHT_MODULE` 指定已有模块路径、`TARA_CHROME_PATH` 指定浏览器、`TARA_AUDIT_ROUNDS` 指定正整数轮数、`TARA_AUDIT_OUTPUT` 指定报告路径。默认报告 `/tmp/tara-i18n-audit/report.json`；任何遗漏或未完成场景均返回非零退出码。
+
+`scripts/test-homepage.cjs` 使用相同的 Playwright/Chrome/目标 URL 环境变量，覆盖桌面/手机、登录页/空会话与中英文共 8 个场景，检查空会话及新建对话停留顶部、五步教程、复制问题、资源链接和横向溢出。接口全部使用合成数据；`TARA_HOMEPAGE_OUTPUT` 可设置报告目录，默认 `/tmp/tara-homepage-audit`。
