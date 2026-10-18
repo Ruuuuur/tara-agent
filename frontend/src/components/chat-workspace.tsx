@@ -104,7 +104,7 @@ export function ChatWorkspace() {
   }, []);
 
   useEffect(() => {
-    if (!followOutput.current || runs.length === 0) {
+    if (!followOutput.current) {
       return;
     }
     const frame = requestAnimationFrame(() => {
@@ -336,9 +336,13 @@ export function ChatWorkspace() {
 }
 
 function EmptyState({ onExample }: { onExample: (question: string) => Promise<void> }) {
+  const { t } = useLanguage();
   return (
     <section className="empty-state">
-      <ProjectIntro variant="workspace" />
+      <details className="workspace-intro">
+        <summary>{t("认识 Tara Agent")}<ChevronDown size={16} aria-hidden="true" /></summary>
+        <ProjectIntro variant="workspace" />
+      </details>
       <QuestionSuggestions onSelect={onExample} />
     </section>
   );

@@ -301,11 +301,19 @@ button:focus-visible, textarea:focus-visible, summary:focus-visible {
 }
 .empty-state {
   display: flex; width: 100%; align-items: center; flex-direction: column;
-  justify-content: flex-start; text-align: left;
+  justify-content: center; text-align: center;
 }
 .workspace-empty { min-height: 100dvh; }
 .workspace-empty .conversation-empty { display: flex; flex: 1; width: min(1040px, calc(100% - 48px)); margin: 0 auto; padding: 14px 0; }
 .workspace-empty .composer-wrap { position: static; flex-shrink: 0; }
+.workspace-intro { width: min(940px, 100%); text-align: left; }
+.workspace-intro summary {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px;
+  color: var(--accent-dark); cursor: pointer; font-size: 0.78rem; font-weight: 650;
+}
+.workspace-intro summary::marker { content: ""; }
+.workspace-intro summary svg { transition: transform 150ms ease; }
+.workspace-intro[open] summary svg { transform: rotate(180deg); }
 .project-intro { width: min(940px, 100%); text-align: left; }
 .project-intro-workspace {
   margin: 0 0 16px; padding: 22px 24px; border: 1px solid #cbdce7;
@@ -939,7 +947,6 @@ tbody tr:hover td { background: #f5f9fc; }
   .project-intro-capabilities, .project-intro-details { grid-template-columns: 1fr; }
   .project-intro-capabilities { gap: 9px; }
   .workspace-empty .conversation-empty { width: calc(100% - 28px); }
-  .workspace-empty .empty-state { min-height: 0; }
   .example-grid { grid-template-columns: 1fr; gap: 8px; }
   .example-card { padding: 14px; }
   .empty-state h2 { font-size: 1.4rem; }
