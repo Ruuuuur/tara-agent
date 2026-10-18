@@ -34,6 +34,7 @@ import { processPresentation } from "@/lib/process-presentation";
 import { ConversationNavigation } from "@/components/conversation-navigation";
 import { ResponseCardGroup, useResponseCard } from "@/components/response-card-group";
 import { QuestionSuggestions } from "@/components/question-suggestions";
+import { ProjectIntro } from "@/components/project-intro";
 import { SessionSidebar } from "@/components/session-sidebar";
 import { apiBaseUrl, getSession, readApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
@@ -103,7 +104,7 @@ export function ChatWorkspace() {
   }, []);
 
   useEffect(() => {
-    if (!followOutput.current) {
+    if (!followOutput.current || runs.length === 0) {
       return;
     }
     const frame = requestAnimationFrame(() => {
@@ -337,6 +338,7 @@ export function ChatWorkspace() {
 function EmptyState({ onExample }: { onExample: (question: string) => Promise<void> }) {
   return (
     <section className="empty-state">
+      <ProjectIntro variant="workspace" />
       <QuestionSuggestions onSelect={onExample} />
     </section>
   );

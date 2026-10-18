@@ -1,6 +1,7 @@
 "use client";
 
 import { LanguageToggle, useLanguage } from "@/components/language-provider";
+import { ProjectIntro } from "@/components/project-intro";
 
 import { AlertTriangle, LoaderCircle, LogIn, UserPlus, UserRound, Waves } from "lucide-react";
 import {
@@ -182,7 +183,9 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => 
   return (
     <main className="auth-page">
       <div className="auth-language"><LanguageToggle /></div>
-      <section className="auth-card">
+      <div className="auth-content">
+        <ProjectIntro variant="auth" />
+        <section className="auth-card">
         <div className="auth-brand-mark"><Waves size={25} /></div>
         <span className="context-label">Tara Agent</span>
         <h1>{mode === "login" ? t("登录 Tara Agent") : t("创建账户")}</h1>
@@ -264,7 +267,8 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => 
               {t("游客进入")}</button>
           </div>
         ) : null}
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

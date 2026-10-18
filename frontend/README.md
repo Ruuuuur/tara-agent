@@ -2,6 +2,12 @@
 
 前端使用 Next.js、React 和 TypeScript，负责用户操作和结果展示。科学计算由后端完成。
 
+## 首页导览
+
+登录页和新对话空白页介绍 Tara Oceans 数据背景、当前可用的分析类型和三步入门方法。新用户可以登录或以游客身份进入，选择示例问题，也可以直接输入研究问题；查看结果时应阅读数据说明，并可打开分析链路核对来源与执行步骤。
+
+首页提供 Tara Oceans 航次介绍与 Ocean Gene Atlas 的外部链接。Ocean Gene Atlas 是独立网站，不是 Tara Agent 的内置工具或本次分析的数据来源。介绍内容位于 `src/components/project-intro.tsx`，中英文文案位于 `src/lib/ui-translations.ts`，页面布局位于 `src/app/globals.css`。
+
 工具明确标记的最终表图优先于外层步骤角色，部分完成时仍展示已生成的核心结果。图表使用 `artifact_key` 匹配产物，旧会话兼容原有标题；受阻项目不补造图表。处理过程使用用户能理解的说明，原始规划和图号仍保留在执行记录与响应中。
 
 ## 界面语言
