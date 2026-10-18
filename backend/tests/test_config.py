@@ -50,3 +50,9 @@ def test_local_frontend_origins_and_explicit_override() -> None:
 
     configured = Settings(cors_origins=["https://tara.example.org"], _env_file=None)
     assert configured.cors_origins == ["https://tara.example.org"]
+
+
+@pytest.mark.parametrize("seconds", [0, -1, 121])
+def test_startup_warmup_timeout_is_bounded(seconds):
+    with pytest.raises(ValidationError):
+        Settings(startup_warmup_timeout_seconds=seconds, _env_file=None)

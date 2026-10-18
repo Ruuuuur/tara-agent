@@ -20,6 +20,7 @@ from tara_agent.api.routes import (
     history_router,
     suggestions_router,
 )
+from tara_agent.api.warmup import warm_up
 from tara_agent.auth import AuthService
 from tara_agent.config import Settings, get_settings
 from tara_agent.data.matou_reader import MatouDataReader
@@ -44,9 +45,10 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        if runtime_database is not None:
-            await runtime_database.ping()
         try:
+            if runtime_database is not None:
+                await runtime_database.ping()
+            await warm_up(application)
             yield
         finally:
             if runtime_database is not None:
@@ -59,6 +61,7 @@ def create_app(
         lifespan=lifespan,
     )
     application.state.settings = runtime_settings
+    application.state.startup_warmup_status = "pending"
     application.state.database = runtime_database
     application.state.run_repository = (
         AgentRunRepository(runtime_database) if runtime_database is not None else None
@@ -129,6 +132,8 @@ def create_app(
                     application.state.agent,
                     application.state.run_repository,
                 )
+
+    application.state.tool_gateway = gateway
 
     if runtime_settings.cors_origins:
         application.add_middleware(

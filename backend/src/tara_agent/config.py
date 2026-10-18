@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     database_pool_size: int = Field(default=5, ge=1, le=50)
     database_max_overflow: int = Field(default=10, ge=0, le=100)
     database_pool_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    startup_warmup_enabled: bool = False
+    startup_warmup_timeout_seconds: float = Field(default=30, gt=0, le=120)
     auth_session_days: int = Field(default=7, ge=1, le=90)
     auth_cookie_name: str = "tara_session"
     auth_guest_login_enabled: bool = True

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -65,6 +65,14 @@ class Database:
 
         async with self._engine.connect() as connection:
             await connection.execute(text("SELECT 1"))
+
+    async def warm_up(self, *, connections: int) -> None:
+        """同时持有少量连接，使连接池真正建连，避免串行查询复用同一个连接。"""
+
+        async with AsyncExitStack() as stack:
+            for _ in range(connections):
+                connection = await stack.enter_async_context(self._engine.connect())
+                await connection.execute(text("SELECT 1"))
 
     async def dispose(self) -> None:
         """释放当前进程持有的全部数据库连接。"""

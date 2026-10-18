@@ -112,3 +112,7 @@ TARA_HTTPS_PORT=443
 ```
 
 同时将 Compose 后端配置中的 `TARA_AUTH_GUEST_LOGIN_ENABLED` 改为 `"false"`；当前模板默认开启共享游客入口。域名解析及网络需支持网站访问和证书申请，生产登录依赖 HTTPS。完成数据库恢复演练、权限和真实分析验收后再开放使用。
+
+## 自动启动预热
+
+Docker 服务已设置开机启动且容器采用 `restart: unless-stopped` 时，后端每次启动会重新执行预热。生产模板默认 `TARA_STARTUP_WARMUP_ENABLED=true`，只读预热数据库连接、认证/会话查询、少量样本与V4/V9计算和问题推荐，不调用模型或产生产品记录。预热默认最多30秒，失败记录警告后继续启动；数据库不可用仍按原启动规则处理。通过 `Startup warmup completed` 日志确认成功，可用 `TARA_STARTUP_WARMUP_ENABLED=false` 关闭。预热降低冷启动延迟，不替代将大型镜像构建与在线服务错峰或隔离。
