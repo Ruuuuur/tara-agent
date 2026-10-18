@@ -1,5 +1,6 @@
 "use client";
 
+import { useResponseLanguage } from "@/components/response-language-provider";
 import { useLanguage } from "@/components/language-provider";
 
 import { ChevronDown, Table2, Download } from "lucide-react";
@@ -23,7 +24,8 @@ export type ResultRows = {
 };
 
 export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultRows, "key">) {
-  const { t, label: translateLabel } = useLanguage();
+  const { t } = useLanguage();
+  const { label: translateLabel, t: contentText } = useResponseLanguage();
   const [open, setOpen] = useResponseCard();
   const [page, setPage] = useState(0);
   const pageSize = 100;
@@ -47,14 +49,14 @@ export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultR
         <div className="artifact-toolbar">
           {rows.every((row) => typeof row.header === "string" && typeof row.sequence === "string") && (
             <button type="button" className="artifact-download"
-              onClick={() => downloadFasta(rows, label)} aria-label={t("下载当前页核酸序列 FASTA")}>
+              onClick={() => downloadFasta(rows, translateLabel(label))} aria-label={t("下载当前页核酸序列 FASTA")}>
               <Download size={14} aria-hidden="true" />{t("下载当前页 FASTA")}</button>
           )}
           <button
             type="button"
             className="artifact-download"
-            onClick={() => downloadCsv(rows, label)}
-            aria-label={t("下载{0}", [label])}
+            onClick={() => downloadCsv(rows, translateLabel(label))}
+            aria-label={t("下载{0}", [translateLabel(label)])}
           >
             <Download size={14} aria-hidden="true" />
             {t("下载 CSV")}</button>
@@ -74,8 +76,8 @@ export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultR
                 <tr key={currentPage * pageSize + index}>
                   {columns.map((column) => (
                     <td key={column} data-column={column} title={typeof row[column] === "string" ? row[column] : undefined}>{column === "sequence" && typeof row[column] === "string"
-                      ? <details><summary>{row[column].length} {t("个碱基")}</summary><pre>{row[column]}</pre></details>
-                      : formatCell(column, row[column], t)}</td>
+                      ? <details><summary>{row[column].length} {contentText("个碱基")}</summary><pre>{row[column]}</pre></details>
+                      : formatCell(column, row[column], contentText)}</td>
                   ))}
                 </tr>
               ))}

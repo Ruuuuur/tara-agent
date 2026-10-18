@@ -13,7 +13,7 @@ from tara_agent.agent.models import (
 from tara_agent.agent.runtime import PersistentAgentRun
 from tara_agent.agent.workflow import WorkflowTaskEvent
 from tara_agent.observability.execution import TraceObservationEvent
-from tara_agent.persistence.repositories import SpanRecord, StartedRun
+from tara_agent.persistence.repositories import ContextMessageRecord, SpanRecord, StartedRun
 
 
 class RuntimeRepository:
@@ -214,10 +214,7 @@ async def test_persistent_run_records_dynamic_langgraph_tasks() -> None:
         "分支 B",
         "分支 B 工具调用",
     ]
-    assert all(
-        span.input_data == {"question": "测试动态节点"}
-        for span in (spans[1], spans[3])
-    )
+    assert all(span.input_data == {"question": "测试动态节点"} for span in (spans[1], spans[3]))
     assert [span.output_data for span in (spans[1], spans[3])] == [
         {"value": 1},
         {"value": 2},
@@ -296,12 +293,37 @@ async def test_persistent_run_records_current_answer_language():
         agent=cast(Any, DynamicWorkflowAgent()),
         repository=cast(Any, repository),
         run=run,
-        question="原始中文问题",
-        answer_language="en",
+        question="原始中文问题，请用英文回答",
     )
     assert execution.context.answer_language == "en"
-    assert execution.question == "原始中文问题"
+    assert execution.question == "原始中文问题，请用英文回答"
     _ = [event async for event in execution.stream()]
     root = next(span for span in repository.spans.values() if span.parent_span_id is None)
     assert root.input_data["conversation_context"]["answer_language"] == "en"
-    assert root.input_data["question"] == "原始中文问题"
+    assert root.input_data["question"] == "原始中文问题，请用英文回答"
+
+
+@pytest.mark.parametrize(
+    ("previous", "question", "expected"),
+    [
+        ("Here are two samples and their ocean regions.", "继续", "en"),
+        ("以下是两个样本及其海区。", "Continue", "zh"),
+        ("以下是两个样本及其海区。", "Explain the two samples in more detail.", "en"),
+    ],
+)
+def test_persistent_follow_up_restores_language_from_saved_messages(previous, question, expected):
+    run = StartedRun(
+        session_id=uuid4(),
+        trace_id=uuid4(),
+        user_message_id=uuid4(),
+        assistant_message_id=uuid4(),
+        started_at=datetime.now(UTC),
+        context_messages=(ContextMessageRecord(role="assistant", content=previous, trace_id=None),),
+    )
+    execution = PersistentAgentRun(
+        agent=cast(Any, DynamicWorkflowAgent()),
+        repository=cast(Any, RuntimeRepository()),
+        run=run,
+        question=question,
+    )
+    assert execution.context.answer_language == expected

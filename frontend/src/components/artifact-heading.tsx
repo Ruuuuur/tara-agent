@@ -1,16 +1,17 @@
 
 "use client";
 
+import { useResponseLanguage } from "@/components/response-language-provider";
 import { useLanguage } from "@/components/language-provider";
 import { sourceGroups } from "@/lib/trace-data-summary";
 
-export function ArtifactHeading({ title, scope, sources }: {
-  title: string; scope: string; sources: string[];
+export function ArtifactHeading({ title, scope, sources, prefix = "" }: {
+  title: string; scope: string; sources: string[]; prefix?: string;
 }) {
-  const { label } = useLanguage();
+  const { label } = useResponseLanguage();
   return (
     <span className="artifact-heading">
-      <span className="artifact-heading-title">{label(title)}</span>
+      <span className="artifact-heading-title">{prefix}{label(title)}</span>
       {scope ? <span className="artifact-heading-scope">{label(scope)}</span> : null}
       <DataSourceList sources={sources} />
     </span>

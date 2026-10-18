@@ -1,11 +1,13 @@
 "use client";
 
+import { useResponseLanguage } from "@/components/response-language-provider";
 import { useLanguage } from "@/components/language-provider";
 
 import { Download } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Config, Data, Layout } from "plotly.js";
 
+import { chartPresentation } from "@/lib/chart-presentation";
 import { createDownloadName } from "@/lib/downloads";
 import type { ChartSpec } from "@/lib/types";
 
@@ -13,8 +15,10 @@ type AnalysisChartProps = {
   chart: ChartSpec;
 };
 
-export function AnalysisChart({ chart }: AnalysisChartProps) {
+export function AnalysisChart({ chart: sourceChart }: AnalysisChartProps) {
   const { t } = useLanguage();
+  const { language, t: contentText } = useResponseLanguage();
+  const chart = useMemo(() => chartPresentation(sourceChart, language), [sourceChart, language]);
   const chartRef = useRef<HTMLDivElement>(null);
   const plotlyRef = useRef<typeof import("plotly.js-dist-min").default | null>(null);
   const [ready, setReady] = useState(false);
@@ -35,7 +39,7 @@ export function AnalysisChart({ chart }: AnalysisChartProps) {
         const theme = chartTheme();
         await plotly.react(
           element,
-          chartData(chart, theme, t),
+          chartData(chart, theme, contentText),
           chartLayout(chart, theme),
           chartConfig,
         );
@@ -57,7 +61,7 @@ export function AnalysisChart({ chart }: AnalysisChartProps) {
       }
       plotlyRef.current = null;
     };
-  }, [chart, t]);
+  }, [chart, contentText]);
 
   useEffect(() => {
     const element = chartRef.current;
@@ -125,7 +129,7 @@ export function AnalysisChart({ chart }: AnalysisChartProps) {
             : chart.kind === "correlation_circle" ? 620 : undefined }} aria-label={chart.title} />
       </div>
       {chart.kind === "correlation_circle" && (
-        <p className="chart-reading-note">{t("标签引线指向原始变量点，文字位置不代表坐标；悬停查看坐标，完整数值见 PLS 变量相关坐标表。")}</p>
+        <p className="chart-reading-note">{contentText("标签引线指向原始变量点，文字位置不代表坐标；悬停查看坐标，完整数值见 PLS 变量相关坐标表。")}</p>
       )}
       {error ? <p className="artifact-error" role="status">{t(error)}</p> : null}
     </>

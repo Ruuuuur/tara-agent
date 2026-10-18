@@ -24,7 +24,7 @@ function record(value: unknown): Record<string, unknown> {
 
 // 图号和内部任务称呼仅作来源证据，不要求用户了解它们才能读懂标题。
 export function artifactTitle(title: string): string {
-  return title.replace(/图\d+[a-z]?对照\s*·\s*/g, "")
+  return title.replace(/图[0-9A-Za-z/与]+对照\s*·\s*/g, "")
     .replace(/论文对应项目与完成状态/g, "分析项目与完成状态")
     .replace(/作者参考重算/g, "使用公开参考数据计算")
     .replace(/作者参考排名/g, "公开参考数据排名")

@@ -8,13 +8,13 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
 
+from tara_agent.agent.conversation import build_conversation_context
 from tara_agent.agent.gateway import AgentToolError
 from tara_agent.agent.graph import TaraAgent
 from tara_agent.agent.models import (
     AgentResponse,
     AgentStreamEvent,
     ChatRequest,
-    ConversationContext,
 )
 from tara_agent.agent.provider import AgentModelError
 from tara_agent.agent.runtime import PersistentAgentRun, PersistentAgentRunner
@@ -54,12 +54,10 @@ async def chat(
     try:
         runner = _persistent_agent(request)
         if runner is not None:
-            return await runner.run(
-                payload.question, user.id, payload.session_id, payload.answer_language
-            )
+            return await runner.run(payload.question, user.id, payload.session_id)
         if _allow_ephemeral_execution(request):
             return await _agent(request).run(
-                payload.question, ConversationContext(answer_language=payload.answer_language)
+                payload.question, build_conversation_context([], question=payload.question)
             )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -100,9 +98,7 @@ async def chat_stream(
     runner = _persistent_agent(request)
     try:
         if runner is not None:
-            execution = await runner.start(
-                payload.question, user.id, payload.session_id, payload.answer_language
-            )
+            execution = await runner.start(payload.question, user.id, payload.session_id)
         elif not _allow_ephemeral_execution(request):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -125,7 +121,7 @@ async def chat_stream(
                 execution.stream()
                 if execution is not None
                 else agent.stream(
-                    payload.question, ConversationContext(answer_language=payload.answer_language)
+                    payload.question, build_conversation_context([], question=payload.question)
                 )
             )
             async for event in stream:

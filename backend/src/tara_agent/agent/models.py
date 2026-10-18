@@ -267,7 +267,8 @@ class ChatRequest(BaseModel):
 
     question: str = Field(min_length=1, max_length=2_000)
     session_id: UUID | None = None
-    answer_language: AnswerLanguage = "zh"
+    # 兼容已缓存的旧前端；服务端仅按提问和会话判定，不使用此字段。
+    answer_language: AnswerLanguage | None = Field(default=None, deprecated=True)
 
     @field_validator("question")
     @classmethod

@@ -1,5 +1,8 @@
 "use client";
 
+import { ResponseLanguageProvider, useResponseLanguage } from "@/components/response-language-provider";
+import { responseLanguage } from "@/lib/response-language";
+import { warningMessage } from "@/lib/warning-message";
 import { LanguageToggle, useLanguage } from "@/components/language-provider";
 
 import {
@@ -70,7 +73,7 @@ type Run = {
 };
 
 export function ChatWorkspace() {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   const [question, setQuestion] = useState("");
   const [runs, setRuns] = useState<Run[]>([]);
   const [sessionId, setSessionId] = useState<string>();
@@ -186,7 +189,7 @@ export function ChatWorkspace() {
     };
 
     try {
-      await streamQuestion(normalized, sessionId, handleEvent, language);
+      await streamQuestion(normalized, sessionId, handleEvent);
     } catch (error) {
       const message = error instanceof Error ? error.message : "请求失败";
       setRuns((current) =>
@@ -351,6 +354,7 @@ function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
     <article className="analysis-run" id={`analysis-run-${run.id}`}
       tabIndex={-1} aria-label={t("第 {0} 轮对话", [turn])}>
       <UserMessage question={run.question} createdAt={run.createdAt} />
+      <ResponseLanguageProvider language={responseLanguage(answer || run.streamedReasoning, run.question)}>
       <div className="agent-response">
         <div className={`agent-avatar${inProgress ? " running" : ""}`} aria-hidden="true">
           {inProgress ? <Activity className="analysis-running-icon" size={18} /> : <Network size={17} />}
@@ -399,6 +403,7 @@ function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
           </ResponseCardGroup>
         </div>
       </div>
+      </ResponseLanguageProvider>
     </article>
   );
 }
@@ -476,7 +481,8 @@ type ProcessPanelProps = {
 };
 
 function ProcessPanel({ steps, response, active, analysis }: ProcessPanelProps) {
-  const { t, label } = useLanguage();
+  const { t } = useLanguage();
+  const { label } = useResponseLanguage();
   const serializedArguments = useMemo(
     () => response?.tool ? JSON.stringify(response.tool.arguments, null, 2) : "",
     [response],
@@ -583,10 +589,15 @@ function CompletedArtifacts({
   response: AgentResponse;
   timestamp: string;
 }) {
-  const { t, label } = useLanguage();
+  const { t } = useLanguage();
+  const { language, label, t: contentText } = useResponseLanguage();
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
   const tables = useMemo(() => findTables(response.result, response.sources), [response]);
   const choices = useMemo(() => artifactChoices(response, tables), [response, tables]);
+  const displayCharts = useMemo(() => response.charts.map((chart, index) => ({
+    ...chart,
+    title: choices.find((choice) => choice.kind === "chart" && choice.index === index)?.label ?? chart.title,
+  })), [response, choices]);
   const primary = choices.filter((choice) => choice.primary);
   const extras = choices.filter((choice) => !choice.primary);
   const groups = [...new Set(primary.map((choice) => choice.group ?? "核心结果"))];
@@ -596,13 +607,13 @@ function CompletedArtifacts({
       return <ResultTableSection key={choice.id} label={table.label} rows={table.rows}
         scope={table.scope} sources={table.sources} />;
     }
-    const chart = response.charts[choice.index];
+    const chart = displayCharts[choice.index];
     return (
       <DisclosureSection key={choice.id} className="chart-panel"
         icon={<ChartNoAxesCombined size={18} />}
-        title={<ArtifactHeading title={t("{0}{1}", [choice.resultRole === "intermediate" ? t("【中间步骤结果】") : t("【最终结果】"), label(choice.label)])} {...chartSummary(chart, response)} />}
+        title={<ArtifactHeading prefix={choice.resultRole === "intermediate" ? t("【中间步骤结果】") : t("【最终结果】")} title={choice.label} {...chartSummary(chart, response)} />}
         meta={t(chartKindLabels[chart.kind])}>
-        <AnalysisChart chart={{ ...chart, title: choice.label }} />
+        <AnalysisChart chart={chart} />
       </DisclosureSection>
     );
   }
@@ -618,8 +629,8 @@ function CompletedArtifacts({
           <div className="analysis-notes">
             {response.warnings.map((warning, index) => (
               <div key={`${warning.code}-${index}`}>
-                <strong>{t(warningTitle(warning.code))}</strong>
-                <span>{warning.message}</span>
+                <strong>{contentText(warningTitle(warning.code))}</strong>
+                <span>{warningMessage(warning, language)}</span>
               </div>
             ))}
           </div>
@@ -628,7 +639,7 @@ function CompletedArtifacts({
 
       {groups.map((group, index) => (
         <section className="core-result-group" key={group} aria-label={group}>
-          {group !== "核心结果" ? <h3>{index + 1}. {t(group)}</h3> : null}
+          {group !== "核心结果" ? <h3>{index + 1}. {label(group)}</h3> : null}
           {primary.filter((choice) => (choice.group ?? "核心结果") === group).map(renderArtifact)}
         </section>
       ))}
@@ -830,13 +841,12 @@ async function streamQuestion(
   question: string,
   sessionId: string | undefined,
   onEvent: (event: AgentStreamEvent) => void,
-  language: "zh" | "en",
 ) {
   const response = await fetch(`${apiBaseUrl}/api/v1/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     credentials: "include",
-    body: JSON.stringify({ question, session_id: sessionId, answer_language: language }),
+    body: JSON.stringify({ question, session_id: sessionId }),
   });
   if (!response.ok) throw await readApiError(response);
   if (!response.body) throw new Error("服务器未返回响应内容，请重试。");

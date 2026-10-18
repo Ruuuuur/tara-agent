@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from tara_agent.agent.context import build_result_summary
+from tara_agent.agent.language import resolve_answer_language
 from tara_agent.agent.models import (
     AnalysisReference,
     ConversationContext,
@@ -73,6 +74,7 @@ def build_conversation_context(
 
     selected.reverse()
     return ConversationContext(
+        answer_language=resolve_answer_language(question, selected),
         messages=selected,
         analysis_references=select_analysis_references(
             question,
