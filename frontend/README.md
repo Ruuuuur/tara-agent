@@ -44,6 +44,7 @@ Docker 部署使用 `standalone` 正式构建，页面、静态文件和地图�
 | 每轮回复全部折叠/展开；顶部、底部及当前对话提问索引 | `src/components/response-card-group.tsx`、`src/components/conversation-navigation.tsx` |
 | 新建、切换、重命名、置顶和批量删除会话 | `src/components/session-sidebar.tsx` |
 | 首页任务/数据标签、综合问题与“换一批” | `src/components/question-suggestions.tsx` |
+| 登录页介绍与可展开的五步入门教程 | `src/components/project-intro.tsx` |
 | 按分析步骤展示表格、每页 100 行与 CSV 下载；核酸序列展开与当前查询页 FASTA 下载 | `src/components/result-table.tsx`、`src/lib/downloads.ts` |
 | 地图、柱状图、散点图与 PNG 下载 | `src/components/analysis-chart.tsx` |
 | 会话内分析记录、执行步骤与节点详情 | `src/components/trace-workspace.tsx` |
@@ -74,6 +75,8 @@ pnpm build
 链路追溯的“数据与筛选”保留紧凑标签，用简短文字连接数据集和各轮条件。共同的数据版本、类群和标记只显示一次；实验层、排名与目标功能按实际调用分别展示。长名单显示总数，完整名单可通过标签提示及节点详情查看；原始参数和来源记录保留在详情中，未记录的范围不推断为全量分析。
 
 首页问题按任务类型和科研主题轮换，包括基础查询、丰度、多样性、环境关联与有工具支持的多步骤分析。卡片直接显示涉及的数据集原始文件名，不设折叠。空首页的输入区参与正常布局；小屏或信息较多时允许正常滚动。属/种组成表显示完整样本占比、所选类群内占比及累计占比，保留未鉴定分类，并支持导出完整返回集 CSV。
+
+新用户可在登录页或空白对话首页展开“5 分钟上手 Tara Agent”，按打开对话、自然语言提问、检查过程与链路、继续追问、保存研究记录五步学习。四个入门提示词和一个追问可复制；这些是可尝试的问题，实际可执行范围由当前数据和工具决定。教程默认收起，不改变首页推荐问题的动态抽样或聊天输入流程。
 
 分析方法按实际工具 Span 的执行顺序列出每次调用，显示调用轮次、MCP 工具本名和对应的中文说明。
 

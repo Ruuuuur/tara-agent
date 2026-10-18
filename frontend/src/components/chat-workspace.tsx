@@ -340,7 +340,7 @@ function EmptyState({ onExample }: { onExample: (question: string) => Promise<vo
   return (
     <section className="empty-state">
       <details className="workspace-intro">
-        <summary>{t("认识 Tara Agent")}<ChevronDown size={16} aria-hidden="true" /></summary>
+        <summary>{t("5 分钟上手 Tara Agent")}<ChevronDown size={16} aria-hidden="true" /></summary>
         <ProjectIntro variant="workspace" />
       </details>
       <QuestionSuggestions onSelect={onExample} />
