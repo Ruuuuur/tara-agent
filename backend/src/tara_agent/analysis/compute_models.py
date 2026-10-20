@@ -160,6 +160,7 @@ class DiversityQuery(MarkerSampleSelection):
     taxon: str | None = Field(default=None, max_length=200)
     match_mode: TaxonMatchMode = TaxonMatchMode.LEVEL
     group_by: DiversityGroup | None = None
+    min_analysis_read_count: int | None = Field(default=None, ge=1, le=10_000_000)
     offset: int = Field(default=0, ge=0)
     limit: int = Field(default=100, ge=1, le=500)
 
@@ -189,6 +190,9 @@ class DiversityGroupSummary(BaseModel):
     group: str
     sample_count: int = Field(ge=1)
     shannon_sample_count: int = Field(ge=0)
+    analysis_reads_min: int = Field(ge=0)
+    analysis_reads_median: float = Field(ge=0)
+    analysis_reads_max: int = Field(ge=0)
     richness_mean: float = Field(ge=0)
     richness_median: float = Field(ge=0)
     shannon_mean: float | None = Field(default=None, ge=0)

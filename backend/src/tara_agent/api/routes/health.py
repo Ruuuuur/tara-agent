@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from tara_agent import __version__
 from tara_agent.agent.gateway import AgentToolError
-from tara_agent.api.schemas import DatasetStatus, HealthResponse
+from tara_agent.api.schemas import DatasetStatus, HealthResponse, MatouDatasetStatus
 from tara_agent.data.reader import ProcessedDataReader
 from tara_agent.persistence import Database
 
@@ -17,12 +17,35 @@ async def _health_response(request: Request) -> HealthResponse:
     database: Database | None = request.app.state.database
     settings = request.app.state.settings
     manifest = reader.manifest if reader is not None else None
+    matou_reader = request.app.state.matou_reader
+    matou = None
+    if matou_reader is not None:
+        matou = MatouDatasetStatus(
+            dataset_version=matou_reader.manifest.dataset_version,
+            taxon=matou_reader.manifest.selection["taxon"],
+            sample_counts={
+                assay: len(matou_reader.list_samples(assay)) for assay in ("MetaG", "MetaT")
+            },
+            study_ready=matou_reader.study_sha256 is not None,
+            paper_reference_ready=matou_reader.reference_sha256 is not None,
+        )
     remote_gateway = request.app.state.remote_gateway
     if remote_gateway is not None:
         try:
-            manifest = (await remote_gateway.get_status()).manifest
+            remote_status = await remote_gateway.get_status()
+            manifest = remote_status.manifest
+            if remote_status.matou is not None:
+                remote_matou = remote_status.matou
+                matou = MatouDatasetStatus(
+                    dataset_version=remote_matou.dataset_version,
+                    taxon=remote_matou.taxon,
+                    sample_counts=remote_matou.sample_counts,
+                    study_ready=remote_matou.study_manifest_sha256 is not None,
+                    paper_reference_ready=remote_matou.function_reference_sha256 is not None,
+                )
         except AgentToolError:
             manifest = None
+            matou = None
 
     datasets: list[DatasetStatus] = []
     if manifest is not None:
@@ -61,6 +84,7 @@ async def _health_response(request: Request) -> HealthResponse:
         agent_ready=agent_ready,
         model=settings.deepseek_model,
         datasets=datasets,
+        matou=matou,
     )
 
 

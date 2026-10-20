@@ -38,7 +38,7 @@ try{for(const width of [1440,390])for(const auth of [false,true])for(const langu
  await tutorial.locator('.tutorial-copy').first().click();
  if(await page.evaluate(()=>navigator.clipboard.readText())!==prompts[0])throw new Error('Copy did not preserve the prompt');
  const intro=page.locator('.project-intro');
- for(const href of ['https://fondationtaraocean.org/expedition/tara-oceans/','https://oga.mio.osupytheas.fr/ocean-gene-atlas/'])if(await intro.locator(`a[href="${href}"][target="_blank"][rel="noopener noreferrer"]`).count()!==1)throw new Error('Resource link missing or unsafe');
+ for(const href of ['https://www.tara-oceans-science.org/tara-oceans-expedition/','https://oga.mio.osupytheas.fr/ocean-gene-atlas/','https://www.nature.com/articles/s41467-025-58027-7'])if(await intro.locator(`a[href="${href}"][target="_blank"][rel="noopener noreferrer"]`).count()!==1)throw new Error('Resource link missing or unsafe');
  await page.locator('.language-toggle').first().click();
  if(JSON.stringify(await tutorial.locator('.tutorial-prompt').allTextContents())!==JSON.stringify(prompts))throw new Error('Literal tutorial prompts changed with UI language');
  await page.locator('.language-toggle').first().click();

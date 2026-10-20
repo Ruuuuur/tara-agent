@@ -63,6 +63,8 @@ returned_sample_records 是当前返回页的真实编号及顺序；returned_sa
   查询某样本内哪些属/种占多数时 taxonomic_rank=genus/species；ASV 细节用 asv。
   必须指定实际 sample_ids；两样本组成可在同一调用中计算，不用 find_taxa 的全局 total 排名。
 - 只有查询观测 ASV 丰富度或 Shannon 多样性时使用 diversity_analysis。
+  用户明确要求排除低测序量样本时，全部 ASV 分析可设置 min_analysis_read_count；
+  这是敏感性分析，不是稀释抽样或测序深度标准化。指定 taxon 时不得设置该参数。
 - 只有查询与允许使用的某个环境变量之间的相关性时使用 environment_association。
 - 群落分布、论文筛选后的Shannon/exp(Shannon)、多样性环境关联、群落PLS或四粒径NMDS使用
   community_analysis；以markers、taxon、sample_ids、depths和outputs限定用户范围。完整任务一默认

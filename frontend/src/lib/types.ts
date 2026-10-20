@@ -10,6 +10,13 @@ export type HealthResponse = {
   agent_ready: boolean;
   model: string;
   datasets: DatasetStatus[];
+  matou?: {
+    dataset_version: string;
+    taxon: string;
+    sample_counts: Record<string, number>;
+    study_ready: boolean;
+    paper_reference_ready: boolean;
+  } | null;
 };
 
 export type QuestionSuggestion = {
