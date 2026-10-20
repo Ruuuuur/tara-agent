@@ -40,7 +40,7 @@ import { ProjectIntro } from "@/components/project-intro";
 import { SessionSidebar } from "@/components/session-sidebar";
 import { apiBaseUrl, getSession, readApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import { formatQuotedQuestion, parseQuotedQuestion, type AnswerQuote } from "@/lib/quoted-question";
+import { formatQuotedQuestion, parseQuotedQuestion, quotePreview, type AnswerQuote } from "@/lib/quoted-question";
 import type {
   AgentResponse,
   AgentStep,
@@ -324,7 +324,7 @@ export function ChatWorkspace() {
         <div className="composer-wrap">
           {quote ? (
             <div className="composer-quote" aria-label={t("已引用此前回答")}>
-              <span>{t("已引用此前回答")}: {quote.text.replace(/\s+/g, " ").slice(0, 88)}</span>
+              <span>{t("已引用此前回答")}: {quotePreview(quote.text, 55)}</span>
               <button type="button" onClick={() => setQuote(null)} aria-label={t("移除引用")}>{t("移除引用")}</button>
             </div>
           ) : null}
@@ -343,7 +343,7 @@ export function ChatWorkspace() {
               }}
               maxLength={2000}
               rows={2}
-              placeholder={t("询问样本、分类群、丰度、多样性或环境关联…")}
+              placeholder={quote ? t("输入你的追问…") : t("询问样本、分类群、丰度、多样性或环境关联…")}
               aria-label={t("输入 Tara 数据问题")}
             />
             <button className="send-button" type="submit" disabled={!canSubmit}
@@ -474,7 +474,7 @@ function UserMessage({ question, createdAt }: { question: string; createdAt: str
     <div className="user-turn">
       <div className="user-message-block">
         <div className="user-message">
-          {quoted ? <span className="message-quote-chip">{t("引用此前回答")} · {quoted.quote.text.replace(/\s+/g, " ").slice(0, 55)}</span> : null}
+          {quoted ? <span className="message-quote-chip">{t("引用此前回答")} · {quotePreview(quoted.quote.text, 55)}</span> : null}
           <span>{quoted?.question ?? question}</span>
         </div>
         <div className="message-meta user-message-meta">

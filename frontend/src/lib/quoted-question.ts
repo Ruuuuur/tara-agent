@@ -4,6 +4,11 @@ const quoteLimit = 700;
 const quoteHeader = /^引用此前回答(?:（Trace ID: ([0-9a-f-]{36})）)?：\n/i;
 const followUpSeparator = "\n\n我的追问：";
 
+export function quotePreview(text: string, limit: number): string {
+  const plain = text.replace(/^#{1,6}\s+/gm, "").replace(/[*_`]/g, "").replace(/\s+/g, " ").trim();
+  return plain.length > limit ? `${plain.slice(0, limit)}…` : plain;
+}
+
 export function formatQuotedQuestion(question: string, quote: AnswerQuote | null): string {
   const prompt = question.trim();
   if (!quote) return prompt;

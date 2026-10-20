@@ -10,7 +10,7 @@ type ProjectIntroProps = { variant: "auth" | "workspace" };
 const resources = [
   {
     name: "Tara Oceans",
-    href: "https://fondationtaraocean.org/expedition/tara-oceans/",
+    href: "https://www.tara-oceans-science.org/tara-oceans-expedition/",
     description: "了解 Tara Oceans 航次与研究背景",
   },
   {
@@ -68,31 +68,16 @@ export function ProjectIntro({ variant }: ProjectIntroProps) {
         <div><GitBranch size={18} aria-hidden="true" /><span>{t("查看图表、来源与分析链路")}</span></div>
       </div>
 
-      <div className={`project-intro-details${variant === "workspace" ? " project-intro-details-workspace" : ""}`}>
-        {variant === "auth" ? (
-          <div className="project-intro-guide">
-            <h3>{t("如何开始")}</h3>
-            <ol>
-              <li>{t("登录或以游客身份进入，选择一个示例问题。")}</li>
-              <li>{t("尽量说明类群、V4/V9、海区或环境变量等分析范围。")}</li>
-              <li>{t("查看结果图表、数据说明与执行链路，再继续追问。")}</li>
-            </ol>
-          </div>
-        ) : null}
-
-        <div className="project-intro-resources">
-          <h3>{t("相关资源")}</h3>
-          <div className="project-intro-links">
-            {resources.map((resource) => (
-              <a key={resource.name} href={resource.href} target="_blank" rel="noopener noreferrer">
-                <span><strong>{resource.name}</strong><small>{t(resource.description)}</small></span>
-                <ArrowUpRight size={17} aria-hidden="true" />
-                <span className="sr-only">{t("（在新标签页打开）")}</span>
-              </a>
-            ))}
-          </div>
+      {variant === "auth" ? (
+        <div className="project-intro-guide">
+          <h3>{t("如何开始")}</h3>
+          <ol>
+            <li>{t("登录或以游客身份进入，选择一个示例问题。")}</li>
+            <li>{t("尽量说明类群、V4/V9、海区或环境变量等分析范围。")}</li>
+            <li>{t("查看结果图表、数据说明与执行链路，再继续追问。")}</li>
+          </ol>
         </div>
-      </div>
+      ) : null}
 
       {variant === "auth" ? (
         <details className="quick-tutorial-disclosure">
@@ -100,6 +85,17 @@ export function ProjectIntro({ variant }: ProjectIntroProps) {
           <QuickTutorial id="quick-tutorial-auth" />
         </details>
       ) : <QuickTutorial id="quick-tutorial-workspace" />}
+
+      <nav className="project-intro-resources" aria-label={t("相关资源")}>
+        <span>{t("相关资源")}：</span>
+        {resources.map((resource) => (
+          <a key={resource.name} href={resource.href} target="_blank" rel="noopener noreferrer"
+            title={t(resource.description)}>
+            {resource.name}<ArrowUpRight size={12} aria-hidden="true" />
+            <span className="sr-only">{t("（在新标签页打开）")}</span>
+          </a>
+        ))}
+      </nav>
     </section>
   );
 }
