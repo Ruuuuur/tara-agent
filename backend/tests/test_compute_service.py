@@ -102,6 +102,46 @@ def test_diversity_can_be_limited_to_one_taxon(
     assert all(item.shannon_index == 0 for item in result.observations)
 
 
+def test_diversity_read_filter_reports_remaining_depth_and_keeps_method_warning(
+    compute_service: TaraComputeService,
+) -> None:
+    baseline = compute_service.diversity_analysis(
+        DiversityQuery(marker=Marker.V4, group_by=DiversityGroup.POLAR)
+    )
+    threshold = max(item.analysis_read_count for item in baseline.observations)
+    filtered = compute_service.diversity_analysis(
+        DiversityQuery(
+            marker=Marker.V4,
+            group_by=DiversityGroup.POLAR,
+            min_analysis_read_count=threshold,
+        )
+    )
+
+    assert filtered.observations
+    assert all(item.analysis_read_count >= threshold for item in filtered.observations)
+    assert filtered.page.total == len(filtered.observations)
+    assert filtered.groups[0].analysis_reads_min == threshold
+    assert "read_depth_sensitivity_only" in {
+        warning.code for warning in filtered.metadata.warnings
+    }
+    assert "unrarefied_diversity" in {
+        warning.code for warning in filtered.metadata.warnings
+    }
+
+
+def test_diversity_read_filter_cannot_treat_taxon_reads_as_library_depth(
+    compute_service: TaraComputeService,
+) -> None:
+    with pytest.raises(ValueError, match="读数阈值仅适用于全部 ASV"):
+        compute_service.diversity_analysis(
+            DiversityQuery(
+                marker=Marker.V4,
+                taxon="Dinoflagellata",
+                min_analysis_read_count=10,
+            )
+        )
+
+
 def test_environment_association_requires_three_complete_samples(
     compute_service: TaraComputeService,
 ) -> None:

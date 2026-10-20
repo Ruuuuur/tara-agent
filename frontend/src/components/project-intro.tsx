@@ -18,6 +18,11 @@ const resources = [
     href: "https://oga.mio.osupytheas.fr/ocean-gene-atlas/",
     description: "在独立网站探索海洋基因分布",
   },
+  {
+    name: "硅藻全球分布论文",
+    href: "https://www.nature.com/articles/s41467-025-58027-7",
+    description: "阅读 Nature Communications 的硅藻研究",
+  },
 ] as const;
 
 const beginnerPrompts = [

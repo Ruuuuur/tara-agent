@@ -7,6 +7,14 @@ const messages: Record<string, [string, string]> = {
     "观测丰富度和 Shannon 指数基于未经稀释抽样的测序读数计算，测序量差异可能影响样本间比较。",
     "Observed richness and the Shannon index are calculated from unrarefied sequencing read counts. Differences in sequencing depth may affect comparisons between samples.",
   ],
+  read_depth_sensitivity_only: [
+    "按测序读数阈值排除样本仅用于敏感性分析；保留样本仍未进行测序深度标准化。",
+    "Excluding samples below a sequencing-read threshold is a sensitivity check. The remaining samples have still not been standardized for sequencing depth.",
+  ],
+  no_samples_after_read_filter: [
+    "读数阈值排除了全部样本，本次无法比较多样性；请降低阈值。",
+    "The read-count threshold excluded every sample. Lower the threshold before comparing diversity.",
+  ],
   read_count_is_not_cell_abundance: [
     "原始测序读数及据此计算的相对丰度属于测序信号，不是对细胞丰度的直接测量。",
     "Raw read counts and the relative abundances calculated from them represent sequencing signals, not direct measurements of cell abundance.",

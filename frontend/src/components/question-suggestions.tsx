@@ -144,6 +144,7 @@ export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
             : items.map((item) => {
                 const Icon = categoryIcons[item.category as keyof typeof categoryIcons] ?? Lightbulb;
                 const question = translateSuggestionQuestion(item.question, language);
+                const datasets = item.datasets ?? [];
                 return (
                   <article className="example-card" key={item.id}>
                     <button
@@ -163,19 +164,19 @@ export function QuestionSuggestions({ onSelect }: QuestionSuggestionsProps) {
                       </span>
                       <span className="example-card-question">{question}</span>
                     </button>
-                    <div className="example-data-details">
+                    {datasets.length > 0 ? <div className="example-data-details">
                       <div className="example-data-heading">
                         <Database size={14} aria-hidden="true" />
-                        {t("涉及数据集（")}{item.datasets.length}）
+                        {t("涉及数据集（")}{datasets.length}）
                       </div>
                       <div className="example-datasets" aria-label={t("涉及的数据集")}>
-                        {item.datasets.map((dataset) => (
+                        {datasets.map((dataset) => (
                           <span className="example-dataset-chip" key={dataset} title={datasetLabels[dataset] ?? dataset}>
                             {datasetLabels[dataset] ?? dataset}
                           </span>
                         ))}
                       </div>
-                    </div>
+                    </div> : null}
                     {item.limitation ? <p className="example-limitation">{t(item.limitation)}</p> : null}
                   </article>
                 );

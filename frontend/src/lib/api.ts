@@ -2,6 +2,7 @@ import { apiErrorMessage } from "./api-error-detail";
 import type {
   AuthResponse,
   AuthUser,
+  HealthResponse,
   PageInfo,
   QuestionSuggestionListResponse,
   SessionDetail,
@@ -28,6 +29,10 @@ export class ApiError extends Error {
 
 export function getCurrentUser(signal?: AbortSignal): Promise<AuthUser> {
   return requestJson("/api/v1/auth/me", signal);
+}
+
+export function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
+  return requestJson("/api/v1/health", signal);
 }
 
 export function getQuestionSuggestions(

@@ -182,9 +182,22 @@ class TaraComputeService:
         return list(leaders.values())
 
     def diversity_analysis(self, query: DiversityQuery) -> DiversityResult:
+        if query.taxon is not None and query.min_analysis_read_count is not None:
+            raise ValueError(
+                "读数阈值仅适用于全部 ASV 的多样性分析；"
+                "指定分类单元时不能将目标读数当作测序深度"
+            )
         selection = self._resolve_samples(query.marker, query.sample_ids)
         amplicons, matching_asv_count = self._diversity_amplicons(query)
         observations = self._calculate_diversity(query.marker, selection.selected, amplicons)
+        excluded_low_reads = 0
+        if query.min_analysis_read_count is not None:
+            before_filter = len(observations)
+            observations = [
+                item for item in observations
+                if item.analysis_read_count >= query.min_analysis_read_count
+            ]
+            excluded_low_reads = before_filter - len(observations)
         groups, group_warnings = self._summarize_diversity_groups(
             observations, query.group_by.value if query.group_by else None
         )
@@ -202,6 +215,20 @@ class TaraComputeService:
         ]
         warnings.extend(self._unavailable_sample_warnings(selection.unavailable_for_marker))
         warnings.extend(group_warnings)
+        if query.min_analysis_read_count is not None:
+            warnings.append(ResultWarning(
+                code="read_depth_sensitivity_only",
+                message="按测序读数阈值排除样本仅用于敏感性分析；保留样本仍未进行测序深度标准化。",
+                details={
+                    "minimum_reads": query.min_analysis_read_count,
+                    "excluded_sample_count": excluded_low_reads,
+                },
+            ))
+            if not observations:
+                warnings.append(ResultWarning(
+                    code="no_samples_after_read_filter",
+                    message="读数阈值排除了全部样本，本次无法比较多样性；请降低阈值。",
+                ))
         if query.taxon is not None and matching_asv_count == 0:
             warnings.append(
                 ResultWarning(
@@ -240,6 +267,7 @@ class TaraComputeService:
                         "match_mode": query.match_mode.value,
                         "group_by": query.group_by.value if query.group_by else None,
                         "rarefied": False,
+                        "min_analysis_read_count": query.min_analysis_read_count,
                     },
                 ),
                 warnings=warnings,
@@ -491,11 +519,15 @@ class TaraComputeService:
         group: str, observations: list[DiversityObservation]
     ) -> DiversityGroupSummary:
         richness = [item.observed_asv_richness for item in observations]
+        reads = [item.analysis_read_count for item in observations]
         shannon = [item.shannon_index for item in observations if item.shannon_index is not None]
         return DiversityGroupSummary(
             group=group,
             sample_count=len(observations),
             shannon_sample_count=len(shannon),
+            analysis_reads_min=min(reads),
+            analysis_reads_median=statistics.median(reads),
+            analysis_reads_max=max(reads),
             richness_mean=statistics.fmean(richness),
             richness_median=statistics.median(richness),
             shannon_mean=statistics.fmean(shannon) if shannon else None,

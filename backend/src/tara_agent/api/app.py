@@ -77,6 +77,7 @@ def create_app(
         else None
     )
     application.state.data_reader = None
+    application.state.matou_reader = None
     application.state.remote_gateway = None
     if runtime_settings.data_service_url is not None:
         application.state.remote_gateway = RemoteToolGateway(
@@ -102,6 +103,7 @@ def create_app(
             if runtime_settings.matou_data_dir is not None
             else None
         )
+        application.state.matou_reader = matou_reader
         mcp_server = create_server(application.state.data_reader, matou_reader=matou_reader)
         gateway = MCPToolGateway(mcp_server)
 

@@ -25,6 +25,16 @@ class DatasetStatus(BaseModel):
     error: str | None = None
 
 
+class MatouDatasetStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dataset_version: str
+    taxon: str
+    sample_counts: dict[str, int]
+    study_ready: bool
+    paper_reference_ready: bool
+
+
 class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -37,6 +47,7 @@ class HealthResponse(BaseModel):
     agent_ready: bool
     model: str
     datasets: list[DatasetStatus]
+    matou: MatouDatasetStatus | None = None
 
 
 class QuestionSuggestionResponse(BaseModel):

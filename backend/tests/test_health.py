@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient, Response
@@ -55,6 +56,32 @@ def test_health_reports_valid_processed_data(
     assert payload["data_ready"] is True
     assert payload["agent_ready"] is True
     assert len(payload["datasets"]) == 4
+    assert payload["matou"] is None
+
+
+def test_health_reports_only_enabled_matou_data(
+    preprocessable_dataset_dir: Path, tmp_path: Path
+) -> None:
+    settings = _settings(preprocessable_dataset_dir, tmp_path)
+    preprocess(preprocessable_dataset_dir, settings.processed_data_dir, enforce_expected_shape=False)
+    app = create_app(settings, agent_model=ReadyModel())
+    app.state.matou_reader = SimpleNamespace(
+        manifest=SimpleNamespace(dataset_version="MATOU-v1.5", selection={"taxon": "Bacillariophyta"}),
+        study_sha256="a" * 64,
+        reference_sha256=None,
+        list_samples=lambda assay: [assay, assay],
+    )
+
+    response = asyncio.run(_get(app, "/api/v1/health"))
+
+    assert response.status_code == 200
+    assert response.json()["matou"] == {
+        "dataset_version": "MATOU-v1.5",
+        "taxon": "Bacillariophyta",
+        "sample_counts": {"MetaG": 2, "MetaT": 2},
+        "study_ready": True,
+        "paper_reference_ready": False,
+    }
 
 
 def test_readiness_requires_agent(

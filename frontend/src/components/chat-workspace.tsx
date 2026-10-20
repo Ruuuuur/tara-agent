@@ -33,12 +33,14 @@ import { chartKindLabels, chartSummary } from "@/lib/artifact-summary";
 import { artifactChoices, type ArtifactChoice } from "@/lib/artifact-presentation";
 import { processPresentation } from "@/lib/process-presentation";
 import { ConversationNavigation } from "@/components/conversation-navigation";
+import { AvailableData } from "@/components/available-data";
 import { ResponseCardGroup, useResponseCard } from "@/components/response-card-group";
 import { QuestionSuggestions } from "@/components/question-suggestions";
 import { ProjectIntro } from "@/components/project-intro";
 import { SessionSidebar } from "@/components/session-sidebar";
 import { apiBaseUrl, getSession, readApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
+import { formatQuotedQuestion, parseQuotedQuestion, type AnswerQuote } from "@/lib/quoted-question";
 import type {
   AgentResponse,
   AgentStep,
@@ -77,6 +79,7 @@ type Run = {
 export function ChatWorkspace() {
   const { t } = useLanguage();
   const [question, setQuestion] = useState("");
+  const [quote, setQuote] = useState<AnswerQuote | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [sessionId, setSessionId] = useState<string>();
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -84,7 +87,9 @@ export function ChatWorkspace() {
   const [busy, setBusy] = useState(false);
   const runSequence = useRef(0);
   const followOutput = useRef(true);
-  const canSubmit = question.trim().length > 0 && !busy;
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const quoteTooLong = formatQuotedQuestion(question, quote).length > 2000;
+  const canSubmit = question.trim().length > 0 && !busy && !quoteTooLong;
   const latestRun = runs[runs.length - 1];
   const indexedRuns = runs.filter((run) => !run.historyLoadFailed);
   const latestTracedRun = [...runs].reverse().find((run) => run.traceId);
@@ -116,8 +121,8 @@ export function ChatWorkspace() {
   }, [runs]);
 
   async function submit(nextQuestion: string) {
-    const normalized = nextQuestion.trim();
-    if (!normalized || busy) {
+    const normalized = formatQuotedQuestion(nextQuestion, quote);
+    if (!nextQuestion.trim() || normalized.length > 2000 || busy) {
       return;
     }
     // 仅用于当前页面的临时行标识；校内 HTTP 下不能依赖安全上下文 UUID 接口。
@@ -135,6 +140,7 @@ export function ChatWorkspace() {
       },
     ]);
     setQuestion("");
+    setQuote(null);
     setBusy(true);
 
     let pendingDelta = "";
@@ -216,11 +222,18 @@ export function ChatWorkspace() {
     void submit(question);
   }
 
+  function quoteAnswer(selection: string, traceId?: string) {
+    setQuote({ text: selection.trim().slice(0, 700), traceId });
+    composerRef.current?.focus();
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+  }
+
   function startNewSession() {
     followOutput.current = true;
     setSessionId(undefined);
     setRuns([]);
     setQuestion("");
+    setQuote(null);
     window.scrollTo({ top: 0, behavior: "auto" });
   }
 
@@ -281,6 +294,7 @@ export function ChatWorkspace() {
             <h1>{t("海洋数据分析")}</h1>
           </div>
           <div className="topbar-actions">
+            <AvailableData />
             <LanguageToggle />
             {currentTraceHref ? (
             <Link
@@ -299,7 +313,7 @@ export function ChatWorkspace() {
         <div className={`conversation${!loadingSession && runs.length === 0 ? " conversation-empty" : ""}`} aria-live="polite">
           {loadingSession ? <div className="workspace-loading"><LoaderCircle className="spin" />{t("正在加载对话…")}</div> : null}
           {!loadingSession && runs.length === 0 ? <EmptyState onExample={submit} /> : null}
-          {runs.map((run, index) => <AnalysisRun key={run.id} run={run} turn={index + 1} />)}
+          {runs.map((run, index) => <AnalysisRun key={run.id} run={run} turn={index + 1} onQuote={quoteAnswer} />)}
         </div>
 
         {!loadingSession && indexedRuns.length > 0 ? (
@@ -308,8 +322,15 @@ export function ChatWorkspace() {
         ) : null}
 
         <div className="composer-wrap">
+          {quote ? (
+            <div className="composer-quote" aria-label={t("已引用此前回答")}>
+              <span>{t("已引用此前回答")}: {quote.text.replace(/\s+/g, " ").slice(0, 88)}</span>
+              <button type="button" onClick={() => setQuote(null)} aria-label={t("移除引用")}>{t("移除引用")}</button>
+            </div>
+          ) : null}
           <form className="composer" onSubmit={onSubmit}>
             <textarea
+              ref={composerRef}
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               onKeyDown={(event) => {
@@ -331,6 +352,7 @@ export function ChatWorkspace() {
               <span>{busy ? t("分析中") : t("发送")}</span>
             </button>
           </form>
+          {quoteTooLong ? <p className="composer-hint">{t("追问和引用合计不能超过 2000 字，请缩短追问。")}</p> : null}
         </div>
       </main>
     </div>
@@ -350,7 +372,11 @@ function EmptyState({ onExample }: { onExample: (question: string) => Promise<vo
   );
 }
 
-function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
+function AnalysisRun({ run, turn, onQuote }: {
+  run: Run;
+  turn: number;
+  onQuote: (selection: string, traceId?: string) => void;
+}) {
   const { t } = useLanguage();
   const inProgress = !run.historical && !run.response && !run.error;
   const reasoningActive = inProgress && !run.streamedAnswer;
@@ -387,6 +413,8 @@ function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
                 active={inProgress}
                 analysis={analysis}
                 incomplete={run.response?.result.status === "partial"}
+                traceId={run.response?.trace_id ?? run.traceId}
+                onQuote={onQuote}
               />
             ) : null}
             {run.error ? (
@@ -395,6 +423,7 @@ function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
             {run.response ? (
               <CompletedArtifacts
                 response={run.response}
+                question={run.question}
                 timestamp={run.completedAt ?? run.createdAt}
               />
             ) : null}
@@ -418,6 +447,7 @@ function AnalysisRun({ run, turn }: { run: Run; turn: number }) {
 
 function UserMessage({ question, createdAt }: { question: string; createdAt: string }) {
   const { t } = useLanguage();
+  const quoted = parseQuotedQuestion(question);
   const [copied, setCopied] = useState(false);
   const resetTimer = useRef<number | null>(null);
 
@@ -443,7 +473,10 @@ function UserMessage({ question, createdAt }: { question: string; createdAt: str
   return (
     <div className="user-turn">
       <div className="user-message-block">
-        <div className="user-message">{question}</div>
+        <div className="user-message">
+          {quoted ? <span className="message-quote-chip">{t("引用此前回答")} · {quoted.quote.text.replace(/\s+/g, " ").slice(0, 55)}</span> : null}
+          <span>{quoted?.question ?? question}</span>
+        </div>
         <div className="message-meta user-message-meta">
           <time dateTime={createdAt}>{formatDateTime(createdAt)}</time>
           <button
@@ -560,25 +593,53 @@ function AnswerPanel({
   active,
   analysis,
   incomplete,
+  traceId,
+  onQuote,
 }: {
   answer: string;
   active: boolean;
   analysis: boolean;
   incomplete?: boolean;
+  traceId?: string;
+  onQuote: (selection: string, traceId?: string) => void;
 }) {
   const { t } = useLanguage();
+  const answerRef = useRef<HTMLDivElement>(null);
+  const [selection, setSelection] = useState("");
+
+  function captureSelection() {
+    const selected = window.getSelection();
+    const container = answerRef.current;
+    if (!selected || !container || !selected.anchorNode || !selected.focusNode
+      || !container.contains(selected.anchorNode) || !container.contains(selected.focusNode)) {
+      setSelection("");
+      return;
+    }
+    setSelection(selected.toString().trim().slice(0, 700));
+  }
   return (
-    <DisclosureSection
+    <>
+      {!active ? (
+        <div className="answer-quote-action">
+          <span>{selection ? t("已选中回答片段，可以引用后追问。") : t("选中回答中的文字，再点击引用；未选中时引用回答开头。")}</span>
+          <button type="button" onClick={() => { onQuote(selection || answer.slice(0, 700), traceId); setSelection(""); }}>
+            {t(selection ? "引用所选内容追问" : "引用这条回答追问")}
+          </button>
+        </div>
+      ) : null}
+      <DisclosureSection
       className="answer-panel"
       icon={<FileText size={16} />}
       title={analysis ? t("分析结论") : t("回答")}
       meta={active ? t("正在生成") : incomplete ? t("部分完成") : t("已完成")}
     >
-      <div className={active ? "streaming-answer" : undefined}>
+      <div ref={answerRef} className={active ? "streaming-answer" : undefined}
+        onMouseUp={captureSelection} onKeyUp={captureSelection} onTouchEnd={captureSelection}>
         <MarkdownAnswer answer={answer} />
         {active ? <span className="stream-caret" aria-hidden="true" /> : null}
       </div>
-    </DisclosureSection>
+      </DisclosureSection>
+    </>
   );
 }
 
@@ -591,11 +652,54 @@ function MarkdownAnswer({ answer }: { answer: string }) {
   );
 }
 
+function OgaHandoff({ response, question }: { response: AgentResponse; question: string }) {
+  const { t } = useLanguage();
+  const [copied, setCopied] = useState(false);
+  const toolName = response.tool?.name ?? "";
+  const pfam = question.match(/PF\d{5}/i)?.[0]?.toUpperCase();
+  const hasMatouResult = response.sources.some((source) => /MATOU-v1\.5\.(?:metaG|metaT)\.occurrences\.gz/i.test(source));
+  const hasFunctionalTool = ["function_study", "function_atlas", "compare_function_signals", "function_environment", "diatom_function_analysis"].includes(toolName);
+  const completedFunctionalStep = response.steps.some((step) =>
+    /\b(?:function_study|function_atlas|compare_function_signals|function_environment|diatom_function_analysis)\b/.test(step.detail)
+    && /完成|completed/i.test(step.title));
+  if (!pfam || (!hasMatouResult && !hasFunctionalTool && !completedFunctionalStep)) {
+    return null;
+  }
+
+  async function copyPfam() {
+    try {
+      await navigator.clipboard.writeText(pfam!);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <section className="oga-handoff" aria-label={t("Ocean Gene Atlas 查询指引")}>
+      <strong>{t("在 Ocean Gene Atlas 继续探索")}</strong>
+      <p>{t("OGA 支持 Pfam ID，输入框需先选择查询方式。")}</p>
+      <div className="oga-actions">
+        <button type="button" onClick={() => void copyPfam()}>{copied ? t("已复制") : `${t("复制")} ${pfam}`}</button>
+        <a href="https://oga.mio.osupytheas.fr/ocean-gene-atlas/" target="_blank" rel="noopener noreferrer">{t("打开 OGA ↗")}</a>
+      </div>
+      <ol>
+        <li>{t("在 OGA 的 Dataset 中选 MATOUv1+G（DNA）或 MATOUv1+T（RNA）。")}</li>
+        <li>{t("点击“❹ or Pfam ID”前的圆形选项，启用旁边的输入框。")}</li>
+        <li>{t("粘贴 Pfam 编号，检查参数后点击 Submit。")}</li>
+      </ol>
+      <p>{t("OGA 会用对应的 HMM 检索所选数据库；两边结果的样本、版本和单位尚未自动核对，请勿直接比较数值。")}</p>
+    </section>
+  );
+}
+
 function CompletedArtifacts({
   response,
+  question,
   timestamp,
 }: {
   response: AgentResponse;
+  question: string;
   timestamp: string;
 }) {
   const { t } = useLanguage();
@@ -628,6 +732,7 @@ function CompletedArtifacts({
   }
   return (
     <>
+      <OgaHandoff response={response} question={question} />
       {response.warnings.length > 0 ? (
         <DisclosureSection
           className="notes-panel"
