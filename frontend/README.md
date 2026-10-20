@@ -105,6 +105,8 @@ PLS 相关圆直接显示全部环境变量和响应指标名称。拥挤标签�
 
 `scripts/test-ui-i18n.cjs` 使用独立 Playwright 浏览器和合成 API 数据，默认连续运行三轮，覆盖桌面/手机、八种图表、过程与数据说明、补充结果、CSV 与分页、中英文往返切换和桌面历史刷新。逐字断言已生成的英文回答在切换为中文界面、切回英文界面及历史恢复后保持一致，同时比较过程说明、数据说明、表格内容及 Plotly 数据/标题/坐标轴在切换前后完全一致，栏目标题仍随界面切换。检查可见文字、辅助标签及 Plotly 的实际标题、轴、图例和悬停文字；仅排除语言切换按钮的目标语言名称及原始参数区。不会登录真实账户、调用模型或写入服务器数据，不能替代科学计算验收。
 
+数据说明用例来自 `frontend/tests/fixtures/backend-warning-messages.json`，包含后端当前全部固定中文提示原句（含同一代码的不同表述）。在仓库根目录运行 `python3 scripts/export-warning-fixtures.py --check` 检查目录是否过期；新增或修改后端固定提示时，运行不带 `--check` 的命令更新目录，再补齐前端翻译并运行 `pnpm test`。目录与浏览器合成数据共用，避免只测试常用提示。动态模型输出、未知诊断和科学原始值不在固定提示目录中，不应为消除中文而隐藏或改写。
+
 在已安装 Playwright 的环境执行：
 
 ```bash
@@ -116,3 +118,6 @@ TARA_AUDIT_URL=http://localhost:3000 node scripts/test-ui-i18n.cjs
 可通过 `TARA_PLAYWRIGHT_MODULE` 指定已有模块路径、`TARA_CHROME_PATH` 指定浏览器、`TARA_AUDIT_ROUNDS` 指定正整数轮数、`TARA_AUDIT_OUTPUT` 指定报告路径。默认报告 `/tmp/tara-i18n-audit/report.json`；任何遗漏或未完成场景均返回非零退出码。
 
 `scripts/test-homepage.cjs` 使用相同的 Playwright/Chrome/目标 URL 环境变量，覆盖桌面/手机、登录页/空会话与中英文共 8 个场景，检查空会话及新建对话停留顶部、五步教程、复制问题、资源链接和横向溢出。接口全部使用合成数据；`TARA_HOMEPAGE_OUTPUT` 可设置报告目录，默认 `/tmp/tara-homepage-audit`。
+
+
+`scripts/test-planning-errors.cjs` 单独覆盖未产生回答的流式失败路径：模拟无效模型决定与模型接口异常，在桌面/手机上验证错误框英文、中英往返切换。默认两轮；使用相同 Playwright、Chrome、URL、轮数环境变量，`TARA_PLANNING_ERROR_OUTPUT` 指定报告路径。不会重试真实科学任务或调用真实模型。

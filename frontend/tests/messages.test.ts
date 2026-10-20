@@ -7,6 +7,8 @@ import { authValidationMessage } from "../src/lib/auth-validation";
 import { translateUi } from "../src/lib/i18n";
 
 for (const [source, expected] of [
+  ["模型返回了无效的分析决定", "The model could not produce a valid analysis plan. Please try again."],
+  ["模型服务暂时不可用，请稍后重试。", "The model service is temporarily unavailable. Please try again later."],
   ["示例问题暂时不可用，请检查处理后数据。", "Example questions are temporarily unavailable. Please check the processed data."],
   ["请求来源不受信任。", "This request comes from an untrusted origin."],
   ["该邮箱已经注册。", "This email address is already registered."],

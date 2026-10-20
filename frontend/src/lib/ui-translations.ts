@@ -1,5 +1,7 @@
 // 仅翻译应用生成的界面标签；聊天正文、原始参数和数据值不进入此词典。
 export const english: Record<string, string> = {
+  "模型返回了无效的分析决定": "The model could not produce a valid analysis plan. Please try again.",
+  "模型服务暂时不可用，请稍后重试。": "The model service is temporarily unavailable. Please try again later.",
   "认识 Tara Agent": "Meet Tara Agent",
   "用自然语言探索海洋科学数据": "Explore marine science data in natural language",
   "Tara Oceans 航次调查全球海洋浮游生物及其环境。Tara Agent 将已接入的样本、18S 群落和可用的基因功能数据连接到可追溯的分析流程。": "The Tara Oceans expedition studied plankton and its environment across the global ocean. Tara Agent connects available sample records, 18S communities and gene function data to traceable analyses.",

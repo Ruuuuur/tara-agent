@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from types import SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from openai import OpenAIError
 
 from tara_agent.agent.models import (
     AnalysisReference,
@@ -147,12 +149,18 @@ async def test_planner_rejects_unusable_function_calls(calls: list[Any]) -> None
 
 @pytest.mark.anyio
 async def test_multiple_white_list_calls_require_multi_step_instead_of_dropping_one():
-    model = model_with(FakeCompletions([
-        tool_call("get_sample_info", '{"sample_id":"TARA_TEST_001"}'),
-        tool_call("taxon_abundance", '{"query":{"marker":"v9","taxon":"Bacillariophyta"}}'),
-    ]))
-    tools = [ToolDefinition(name=name, description="测试工具", input_schema={})
-             for name in (ToolName.GET_SAMPLE_INFO, ToolName.TAXON_ABUNDANCE)]
+    model = model_with(
+        FakeCompletions(
+            [
+                tool_call("get_sample_info", '{"sample_id":"TARA_TEST_001"}'),
+                tool_call("taxon_abundance", '{"query":{"marker":"v9","taxon":"Bacillariophyta"}}'),
+            ]
+        )
+    )
+    tools = [
+        ToolDefinition(name=name, description="测试工具", input_schema={})
+        for name in (ToolName.GET_SAMPLE_INFO, ToolName.TAXON_ABUNDANCE)
+    ]
     with pytest.raises(MultiToolPlanRequired):
         await model.plan("查询背景和组成", ConversationContext(), tools)
 
@@ -482,7 +490,103 @@ async def test_answer_language_overrides_base_prompt_and_keeps_scientific_input(
     assert deltas[0].content == "Answer"
     prompt = completions.request["messages"][0]["content"]
     assert f"必须使用{expected}" in prompt
+    label = "More results" if language == "en" else "选择更多结果"
+    assert f"“{label}”" in prompt
+    if language == "en":
+        assert "选择更多结果" not in prompt
     assert prompt.index("本轮语言要求") > prompt.index("回答应使用中文")
     user_input = json.loads(completions.request["messages"][1]["content"])
     assert user_input["question"] == "中文问题"
     assert user_input["tool_result"]["returned_sample_records"][0]["sample_id"] == "TARA_TEST_001"
+
+
+class DecisionSequence:
+    def __init__(self, outcomes):
+        self.outcomes = list(outcomes)
+        self.requests = []
+
+    async def create(self, **kwargs):
+        self.requests.append(kwargs)
+        outcome = self.outcomes.pop(0)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+
+def decision_response(calls, usage=None):
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(tool_calls=calls))], usage=usage
+    )
+
+
+def valid_selection():
+    return [
+        tool_call(
+            "select_analysis_workflow", '{"workflow":"single_step","rationale":"Query abundance"}'
+        )
+    ]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        [],
+        [tool_call("wrong_function", "{}")],
+        [tool_call("select_analysis_workflow", "not-json")],
+        [tool_call("select_analysis_workflow", '{"workflow":"unknown"}')],
+    ],
+)
+async def test_structured_decision_corrects_one_invalid_response_and_counts_actual_usage(
+    invalid, caplog
+):
+    usage = SimpleNamespace(prompt_tokens=100, completion_tokens=20, total_tokens=120)
+    completions = DecisionSequence(
+        [decision_response(invalid, usage), decision_response(valid_selection(), usage)]
+    )
+    result = await model_with(completions).select_workflow(
+        "private-question-marker", ConversationContext(), []
+    )
+    assert result.workflow == "single_step"
+    assert len(completions.requests) == 2
+    assert "structural validation" in completions.requests[1]["messages"][-1]["content"]
+    assert result.usage.input_tokens == 200
+    assert result.usage.output_tokens == 40
+    assert result.usage.total_tokens == 240
+    assert "private-question-marker" not in caplog.text
+    assert "Decision validation failed" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_structured_decision_stops_after_one_correction():
+    completions = DecisionSequence([decision_response([]), decision_response([])])
+    with pytest.raises(AgentModelError, match="无效的分析决定"):
+        await model_with(completions).select_workflow("question", ConversationContext(), [])
+    assert len(completions.requests) == 2
+
+
+@pytest.mark.anyio
+async def test_structured_decision_does_not_repeat_api_errors_or_expose_details(caplog):
+    completions = DecisionSequence([OpenAIError("private-upstream-details")])
+    with pytest.raises(AgentModelError, match="模型服务暂时不可用"):
+        await model_with(completions).select_workflow("question", ConversationContext(), [])
+    assert len(completions.requests) == 1
+    assert "private-upstream-details" not in caplog.text
+    assert "Decision API failed" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_structured_decision_propagates_cancellation_without_retry():
+    completions = DecisionSequence([asyncio.CancelledError()])
+    with pytest.raises(asyncio.CancelledError):
+        await model_with(completions).select_workflow("question", ConversationContext(), [])
+    assert len(completions.requests) == 1
+
+
+@pytest.mark.anyio
+async def test_structured_decision_accepts_valid_response_without_correction():
+    completions = DecisionSequence([decision_response(valid_selection())])
+    result = await model_with(completions).select_workflow("question", ConversationContext(), [])
+    assert result.workflow == "single_step"
+    assert len(completions.requests) == 1
+    assert result.usage is None

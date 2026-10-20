@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { warningMessage } from "../src/lib/warning-message";
+import backendWarnings from "./fixtures/backend-warning-messages.json";
 
 const method = {
   code: "unrarefied_diversity",
@@ -42,5 +43,30 @@ test("budget stops continue to report partial completion", () => {
 test("unrecognized stop messages are not treated as dictionary entries", () => {
   for (const message of ["constructor", "toString", "__proto__"]) {
     assert.equal(warningMessage({ code: "analysis_incomplete", message }, "en"), message);
+  }
+});
+
+
+test("read-count metric note translates both deployed service wordings and preserves unknown details", () => {
+  const code = "read_count_is_not_cell_abundance";
+  const screenshot = "测序读数是测序观测信号，不能直接解释为细胞丰度。";
+  const legacy = "原始测序读数及据此计算的相对丰度属于测序信号，不是对细胞丰度的直接测量。";
+  assert.equal(warningMessage({ code, message: screenshot }, "en"), "Sequencing read counts are sequencing observations and cannot be interpreted directly as cell abundance.");
+  assert.equal(warningMessage({ code, message: legacy }, "en"), "Raw read counts and the relative abundances calculated from them represent sequencing signals, not direct measurements of cell abundance.");
+  assert.equal(warningMessage({ code, message: screenshot }, "zh"), screenshot);
+  for (const message of [screenshot + " TARA_A100000038", "未知的指标说明"]) {
+    assert.equal(warningMessage({ code, message }, "en"), message);
+  }
+  assert.equal(warningMessage({ code: "new_metric", message: screenshot }, "en"), screenshot);
+});
+
+
+test("all captured backend fixed Chinese warnings translate without mutating scientific diagnostics", () => {
+  for (const warning of backendWarnings) {
+    const english = warningMessage(warning, "en");
+    assert.doesNotMatch(english, /[\u3400-\u9fff]/, warning.code + ": " + warning.message);
+    assert.equal(warningMessage(warning, "zh"), warning.message);
+    const detailed = { ...warning, message: warning.message + " TARA_A100000038; n=12" };
+    assert.equal(warningMessage(detailed, "en"), detailed.message);
   }
 });

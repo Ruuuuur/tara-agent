@@ -5,7 +5,7 @@ const path=require('node:path');
 const {cases:fixtures}=require('./ui-i18n-fixtures.cjs');
 const contentLanguage=process.env.TARA_AUDIT_CONTENT_LANGUAGE||'en';
 if(!['en','zh'].includes(contentLanguage))throw new Error('TARA_AUDIT_CONTENT_LANGUAGE must be en or zh');
-const cases=contentLanguage==='en'?fixtures:fixtures.map(item=>({...item,answer:'这些样本的分析结果已保留。',reasoning:'根据可用数据执行分析。'}));
+const cases=contentLanguage==='en'?fixtures:fixtures.map(item=>({...item,answer:'这些样本的分析结果已保留。可通过“选择更多结果”查看。',reasoning:'根据可用数据执行分析。'}));
 const rounds=Number(process.env.TARA_AUDIT_ROUNDS||3), output=process.env.TARA_AUDIT_OUTPUT||'/tmp/tara-i18n-audit/report.json';
 if(!Number.isInteger(rounds)||rounds<1)throw new Error('TARA_AUDIT_ROUNDS must be a positive integer');
 fs.mkdirSync(path.dirname(output),{recursive:true});
@@ -48,7 +48,12 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
    await page.getByRole('textbox',{name:'Enter a Tara data question'}).fill('Synthetic fixture: '+item.id);
    await page.getByRole('button',{name:'Send',exact:true}).click();
    await page.locator('.answer-text').waitFor();
+   if(item.id==='core'){
+    const metricNote=contentLanguage==='en'?'Sequencing read counts are sequencing observations and cannot be interpreted directly as cell abundance.':'测序读数是测序观测信号，不能直接解释为细胞丰度。';
+    if(!await page.locator('.analysis-notes').getByText(metricNote,{exact:true}).count())throw new Error('Expected screenshot metric note in response language');
+   }
    const originalAnswer=await page.locator('.answer-text').allTextContents();
+   if(contentLanguage==='en'&&(!originalAnswer.some(text=>text.includes('More results'))||originalAnswer.some(text=>text.includes('选择更多结果'))))throw new Error('Model-quoted app label must use the saved English answer language');
    if(!originalAnswer.length||originalAnswer.every(text=>!text.trim()))throw new Error('Expected a generated answer');
    const assertAnswerUnchanged=async stage=>{
     const actual=await page.locator('.answer-text').allTextContents();

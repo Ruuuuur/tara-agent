@@ -3,6 +3,7 @@
 import { ResponseLanguageProvider, useResponseLanguage } from "@/components/response-language-provider";
 import { responseLanguage } from "@/lib/response-language";
 import { warningMessage } from "@/lib/warning-message";
+import { answerUiLabels } from "@/lib/answer-ui-labels";
 import { LanguageToggle, useLanguage } from "@/components/language-provider";
 
 import {
@@ -582,9 +583,10 @@ function AnswerPanel({
 }
 
 function MarkdownAnswer({ answer }: { answer: string }) {
+  const { language } = useResponseLanguage();
   return (
     <div className="answer-text">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm, [answerUiLabels, { language }]]}>{answer}</ReactMarkdown>
     </div>
   );
 }

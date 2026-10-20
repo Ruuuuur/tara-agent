@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 from typing import Any, Protocol
 
@@ -141,8 +142,7 @@ class DeepSeekChatModel:
                     {
                         "role": "system",
                         "content": (
-                            ROUTER_SYSTEM_PROMPT
-                            + _language_instruction(context.answer_language)
+                            ROUTER_SYSTEM_PROMPT + _language_instruction(context.answer_language)
                         ),
                     },
                     {"role": "user", "content": user_content},
@@ -193,8 +193,7 @@ class DeepSeekChatModel:
                     {
                         "role": "system",
                         "content": (
-                            PLANNER_SYSTEM_PROMPT
-                            + _language_instruction(context.answer_language)
+                            PLANNER_SYSTEM_PROMPT + _language_instruction(context.answer_language)
                         ),
                     },
                     {
@@ -268,34 +267,80 @@ class DeepSeekChatModel:
     async def _structured_decision(self, name, contract, prompt, payload):
         schema = contract.model_json_schema()
         schema["properties"].pop("usage", None)
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.name,
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
-                ],
-                tools=[
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+        ]
+        usages = []
+        # 这里只纠正未执行工具的规划格式；接口错误和取消不额外重试。
+        for attempt in range(2):
+            try:
+                response = await self.client.chat.completions.create(
+                    model=self.name,
+                    messages=messages,
+                    tools=[
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": name,
+                                "description": prompt,
+                                "parameters": _schema_for_model(schema),
+                            },
+                        }
+                    ],
+                    tool_choice="required",
+                    max_tokens=2000,
+                    extra_body={"thinking": {"type": "disabled"}},
+                )
+            except OpenAIError as exc:
+                logging.getLogger("uvicorn.error").warning(
+                    "Decision API failed decision=%s failure=%s", name, type(exc).__name__
+                )
+                raise AgentModelError("模型服务暂时不可用，请稍后重试。") from exc
+            usages.append(_model_usage(getattr(response, "usage", None)))
+            try:
+                calls = response.choices[0].message.tool_calls or []
+                if len(calls) != 1 or calls[0].function.name != name:
+                    raise ValueError("single_function_call_required")
+                decision = contract.model_validate(json.loads(calls[0].function.arguments))
+            except (AttributeError, IndexError, TypeError, ValueError) as exc:
+                # 不记录原始回答、参数或校验值，避免在日志中泄漏用户内容。
+                logging.getLogger("uvicorn.error").warning(
+                    "Decision validation failed decision=%s failure=%s attempt=%d",
+                    name,
+                    type(exc).__name__,
+                    attempt + 1,
+                )
+                if attempt == 1:
+                    raise AgentModelError("模型返回了无效的分析决定") from exc
+                messages = [
+                    *messages,
                     {
-                        "type": "function",
-                        "function": {
-                            "name": name,
-                            "description": prompt,
-                            "parameters": _schema_for_model(schema),
-                        },
+                        "role": "user",
+                        "content": (
+                            "The previous response failed structural validation "
+                            f"({type(exc).__name__}). "
+                            f"Return exactly one {name} function call "
+                            "with arguments matching its schema. "
+                            "Use only the supplied context and verified evidence. "
+                            "Do not invent tool results."
+                        ),
+                    },
+                ]
+                continue
+            # 若某次用量未知，保持未知，不把剩余已知用量误报为完整总量。
+            usage = None
+            if all(item is not None for item in usages):
+                usage = ModelUsage(
+                    **{
+                        field: sum(getattr(item, field) for item in usages)
+                        if all(getattr(item, field) is not None for item in usages)
+                        else None
+                        for field in ModelUsage.model_fields
                     }
-                ],
-                tool_choice="required",
-                max_tokens=2000,
-                extra_body={"thinking": {"type": "disabled"}},
-            )
-            calls = response.choices[0].message.tool_calls or []
-            if len(calls) != 1 or calls[0].function.name != name:
-                raise ValueError("需要且仅允许一个结构化决定")
-            decision = contract.model_validate(json.loads(calls[0].function.arguments))
-        except (OpenAIError, AttributeError, TypeError, ValueError) as exc:
-            raise AgentModelError("模型返回了无效的分析决定") from exc
-        return decision.model_copy(update={"usage": _model_usage(getattr(response, "usage", None))})
+                )
+            return decision.model_copy(update={"usage": usage})
+        raise AssertionError("Unreachable structured decision state")
 
     async def stream_answer(
         self,
@@ -324,7 +369,7 @@ class DeepSeekChatModel:
                 messages=[
                     {
                         "role": "system",
-                        "content": ANSWER_SYSTEM_PROMPT + _language_instruction(answer_language),
+                        "content": _answer_system_prompt(answer_language),
                     },
                     {"role": "user", "content": user_content},
                 ],
@@ -439,6 +484,14 @@ def _model_usage(value: Any) -> ModelUsage | None:
         cached_tokens=getattr(prompt_details, "cached_tokens", None),
         reasoning_tokens=getattr(completion_details, "reasoning_tokens", None),
     )
+
+
+def _answer_system_prompt(language: AnswerLanguage) -> str:
+    """界面名称按回答语言提供，避免模型照抄中文提示中的按钮名。"""
+
+    label = "More results" if language == "en" else "选择更多结果"
+    prompt = ANSWER_SYSTEM_PROMPT.replace("“选择更多结果”", f"“{label}”")
+    return prompt + _language_instruction(language)
 
 
 def _language_instruction(language: AnswerLanguage) -> str:
