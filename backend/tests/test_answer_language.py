@@ -83,3 +83,30 @@ def test_chinese_question_next_to_sample_id_does_not_inherit_english():
         ConversationMessage(role="assistant", content="The sample is in the Atlantic Ocean.")
     ]
     assert resolve_answer_language("查询TARA_A100000038", history) == "zh"
+
+
+@pytest.mark.parametrize(
+    "excerpt,followup,expected",
+    [
+        ("请用中文回答。这个分类群的丰度较高。", "Compare the samples by ocean region.", "en"),
+        (
+            "Reply in English. These samples show different abundance distributions.",
+            "请比较海区。",
+            "zh",
+        ),
+    ],
+)
+def test_compact_quote_content_does_not_choose_followup_language(excerpt, followup, expected):
+    question = (
+        "引用此前回答（Trace ID: 4f9291a0-883e-4d10-a7fa-e69518c18ba1）：\n> "
+        + excerpt
+        + "\n\n我的追问："
+        + followup
+    )
+    assert resolve_answer_language(question) == expected
+
+
+def test_compact_quote_short_followup_keeps_recent_answer_language():
+    question = "引用此前回答：\n> 请用中文回答这句引用\n\n我的追问：Continue"
+    history = [ConversationMessage(role="assistant", content="The analysis has completed.")]
+    assert resolve_answer_language(question, history) == "en"

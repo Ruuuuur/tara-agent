@@ -82,12 +82,28 @@ def _explicit_language(question: str) -> AnswerLanguage | None:
     return "en" if selected in {"英文", "英语", "english"} else "zh"
 
 
+def _quoted_followup(question: str) -> str:
+    """引用片段只是证据，语言由追问正文及近期回答决定。"""
+
+    header = re.match(r"^引用此前回答(?:（Trace ID: [0-9a-f-]{36}）)?：\n", question, re.I)
+    if header is None:
+        return question
+    split_at = question.rfind("\n\n我的追问：")
+    if split_at < header.end():
+        return question
+    lines = question[header.end() : split_at].split("\n")
+    if not lines or any(not line.startswith("> ") for line in lines):
+        return question
+    return question[split_at + len("\n\n我的追问：") :]
+
+
 def resolve_answer_language(
     question: str,
     messages: Iterable[ConversationMessage] = (),
 ) -> AnswerLanguage:
     """明确要求优先；无语言信息的追问沿用近期回复，否则按本轮正文判断。"""
 
+    question = _quoted_followup(question)
     explicit = _explicit_language(question)
     if explicit is not None:
         return explicit

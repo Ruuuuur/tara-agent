@@ -52,6 +52,10 @@
     "message": "缺少站点标识的样本未参与站点汇总。"
   },
   {
+    "code": "no_samples_after_read_filter",
+    "message": "读数阈值排除了全部样本，本次无法比较多样性；请降低阈值。"
+  },
+  {
     "code": "nonexclusive_domains",
     "message": "功能合并沿用作者对Pfam信号求和的规则；共享基因与多结构域不分摊，不能解释为互斥基因组成、蛋白活性或RNA/DNA活性。"
   },
@@ -74,6 +78,10 @@
   {
     "code": "read_count_is_not_cell_abundance",
     "message": "测序读数是测序观测信号，不能直接解释为细胞丰度。"
+  },
+  {
+    "code": "read_depth_sensitivity_only",
+    "message": "按测序读数阈值排除样本仅用于敏感性分析；保留样本仍未进行测序深度标准化。"
   },
   {
     "code": "reference_scope",

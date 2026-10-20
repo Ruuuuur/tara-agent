@@ -63,10 +63,14 @@ def test_health_reports_only_enabled_matou_data(
     preprocessable_dataset_dir: Path, tmp_path: Path
 ) -> None:
     settings = _settings(preprocessable_dataset_dir, tmp_path)
-    preprocess(preprocessable_dataset_dir, settings.processed_data_dir, enforce_expected_shape=False)
+    preprocess(
+        preprocessable_dataset_dir, settings.processed_data_dir, enforce_expected_shape=False
+    )
     app = create_app(settings, agent_model=ReadyModel())
     app.state.matou_reader = SimpleNamespace(
-        manifest=SimpleNamespace(dataset_version="MATOU-v1.5", selection={"taxon": "Bacillariophyta"}),
+        manifest=SimpleNamespace(
+            dataset_version="MATOU-v1.5", selection={"taxon": "Bacillariophyta"}
+        ),
         study_sha256="a" * 64,
         reference_sha256=None,
         list_samples=lambda assay: [assay, assay],
@@ -84,9 +88,7 @@ def test_health_reports_only_enabled_matou_data(
     }
 
 
-def test_readiness_requires_agent(
-    preprocessable_dataset_dir: Path, tmp_path: Path
-) -> None:
+def test_readiness_requires_agent(preprocessable_dataset_dir: Path, tmp_path: Path) -> None:
     settings = _settings(preprocessable_dataset_dir, tmp_path)
     preprocess(
         preprocessable_dataset_dir,
@@ -134,9 +136,7 @@ def test_readiness_returns_503_when_sources_are_missing(tmp_path: Path) -> None:
     assert response.json()["data_ready"] is False
 
 
-def test_api_does_not_treat_raw_sources_as_ready(
-    valid_dataset_dir: Path, tmp_path: Path
-) -> None:
+def test_api_does_not_treat_raw_sources_as_ready(valid_dataset_dir: Path, tmp_path: Path) -> None:
     app = create_app(_settings(valid_dataset_dir, tmp_path))
 
     response = asyncio.run(_get(app, "/api/v1/ready"))

@@ -91,7 +91,7 @@ export function ProjectIntro({ variant }: ProjectIntroProps) {
         {resources.map((resource) => (
           <a key={resource.name} href={resource.href} target="_blank" rel="noopener noreferrer"
             title={t(resource.description)}>
-            {resource.name}<ArrowUpRight size={12} aria-hidden="true" />
+            {t(resource.name)}<ArrowUpRight size={12} aria-hidden="true" />
             <span className="sr-only">{t("（在新标签页打开）")}</span>
           </a>
         ))}
