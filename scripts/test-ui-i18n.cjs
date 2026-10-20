@@ -53,6 +53,7 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
     if(!await page.locator('.analysis-notes').getByText(metricNote,{exact:true}).count())throw new Error('Expected screenshot metric note in response language');
    }
    const originalAnswer=await page.locator('.answer-text').allTextContents();
+
    if(contentLanguage==='en'&&(!originalAnswer.some(text=>text.includes('More results'))||originalAnswer.some(text=>text.includes('选择更多结果'))))throw new Error('Model-quoted app label must use the saved English answer language');
    if(!originalAnswer.length||originalAnswer.every(text=>!text.trim()))throw new Error('Expected a generated answer');
    const assertAnswerUnchanged=async stage=>{
@@ -65,11 +66,16 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
    }
    const cards=page.locator('.response-card-controls button').first(); await cards.click(); await cards.click();
    if(item.charts.length)await page.waitForFunction(n=>[...document.querySelectorAll('.js-plotly-plot')].filter(el=>el._fullLayout).length===n,item.charts.length,{timeout:45000});
+   if(item.id==='taxonomy'){
+    const unresolved=page.locator('td[data-column="taxon_label"]').filter({hasText:contentLanguage==='en'?'Unresolved genus':'未鉴定到属'}).first();
+    const expected=contentLanguage==='en'?'Unresolved genus (Root;Eukaryota;Stramenopiles;Ochrophyta;Bacillariophyta;unclassified_X)':'未鉴定到属（Root;Eukaryota;Stramenopiles;Ochrophyta;Bacillariophyta;unclassified_X）';
+    if(await unresolved.textContent()!==expected||await unresolved.getAttribute('title')!==expected)throw new Error('Unresolved taxonomy text and tooltip must use response language and retain full path');
+   }
    let findings=[...initial,...await scan(page)];
    for(const point of (await page.locator('.scatterlayer .point').all()).slice(0,1)){
     try{await point.hover({timeout:1000});findings.push(...await scan(page));}catch{}
    }
-   if(item.id==='pagination'){
+   if(['pagination','taxonomy'].includes(item.id)){
     await page.getByRole('button',{name:'Next',exact:true}).click();findings.push(...await scan(page));
     await page.getByRole('button',{name:'Previous',exact:true}).click();
    }
@@ -78,6 +84,7 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
     process:[...document.querySelectorAll('.process-panel ol')].map(el=>el.textContent),
     notes:[...document.querySelectorAll('.analysis-notes')].map(el=>el.textContent),
     tables:[...document.querySelectorAll('.table-scroll table')].map(el=>el.textContent),
+    tableTitles:[...document.querySelectorAll('.table-scroll td[title]')].map(el=>el.getAttribute('title')),
     scopes:[...document.querySelectorAll('.artifact-heading-scope,.chart-reading-note')].map(el=>el.textContent),
     plots:[...document.querySelectorAll('.js-plotly-plot')].map(el=>({data:el.data?.map(trace=>Object.fromEntries(['type','x','y','z','text','customdata','name','lat','lon','values','labels'].filter(key=>key in trace).map(key=>[key,trace[key]]))),title:el._fullLayout?.title?.text,x:el._fullLayout?.xaxis?.title?.text,y:el._fullLayout?.yaxis?.title?.text})),
    }));
@@ -103,7 +110,8 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
     if(contentLanguage==='en'&&/[\u3400-\u9fff]/.test(download.suggestedFilename())) findings.push({text:download.suggestedFilename(),element:'CSV filename'});
     const content=fs.readFileSync(await download.path(),'utf8');
     if(!content.trim())throw Error('Empty CSV');
-    if(item.id==='pagination'&&content.split('\n').length!==106)throw Error('CSV must contain all 105 samples');
+    if(item.id==='taxonomy'&&(!content.includes('未鉴定到属（Root;Eukaryota;Stramenopiles;Ochrophyta;Bacillariophyta;unclassified_X）')||!content.includes('443272')||content.includes('Unresolved genus')))throw new Error('Taxonomy CSV must retain the source labels, full paths and counts');
+    if(['pagination','taxonomy'].includes(item.id)&&content.split('\n').length!==106)throw Error('CSV must contain all 105 samples');
     csvChecked=true;
    }
    let historyChecked=false;

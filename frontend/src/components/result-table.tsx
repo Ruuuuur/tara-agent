@@ -7,6 +7,7 @@ import { ChevronDown, Table2, Download } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import { downloadCsv, downloadFasta } from "@/lib/downloads";
+import { taxonomyCellValue } from "@/lib/taxonomy-label";
 import { useResponseCard } from "@/components/response-card-group";
 import { ArtifactHeading } from "@/components/artifact-heading";
 import { artifactSummary } from "@/lib/artifact-summary";
@@ -25,7 +26,7 @@ export type ResultRows = {
 
 export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultRows, "key">) {
   const { t } = useLanguage();
-  const { label: translateLabel, t: contentText } = useResponseLanguage();
+  const { language, label: translateLabel, t: contentText } = useResponseLanguage();
   const [open, setOpen] = useResponseCard();
   const [page, setPage] = useState(0);
   const pageSize = 100;
@@ -74,11 +75,12 @@ export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultR
               {/* 结果顺序固定，以全表行位置标识，避免同一 Pfam 或样本的多条记录重名。 */}
               {visibleRows.map((row, index) => (
                 <tr key={currentPage * pageSize + index}>
-                  {columns.map((column) => (
-                    <td key={column} data-column={column} title={typeof row[column] === "string" ? row[column] : undefined}>{column === "sequence" && typeof row[column] === "string"
-                      ? <details><summary>{row[column].length} {contentText("个碱基")}</summary><pre>{row[column]}</pre></details>
-                      : formatCell(column, row[column], contentText)}</td>
-                  ))}
+                  {columns.map((column) => {
+                    const value = taxonomyCellValue(column, row, language);
+                    return <td key={column} data-column={column} title={typeof value === "string" ? value : undefined}>{column === "sequence" && typeof value === "string"
+                      ? <details><summary>{value.length} {contentText("个碱基")}</summary><pre>{value}</pre></details>
+                      : formatCell(column, value, contentText)}</td>;
+                  })}
                 </tr>
               ))}
             </tbody>
