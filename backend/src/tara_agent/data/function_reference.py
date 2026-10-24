@@ -12,6 +12,7 @@ from tara_agent.observability.execution import observe
 AUTHOR_COMMIT = "2647f6be2cd709f48d4dcde314be3783978afa97"
 REFERENCE_VERSION = "diatom-paper-task2-v1"
 REFERENCE_URL = f"https://github.com/JJPierellaKarlusich/Diatom_patters/tree/{AUTHOR_COMMIT}"
+REQUIRED_FILES = ("pfam", "oceans", "environment", "coordinates", "MetaG", "MetaT")
 
 
 class FunctionReference:
@@ -24,6 +25,16 @@ class FunctionReference:
             AUTHOR_COMMIT,
         ):
             raise ValueError("功能分析参考资料版本不匹配")
+
+    def validate(self) -> None:
+        """发布前核对全部必需文件和摘要，不在分析请求中下载或重建资料。"""
+        missing = set(REQUIRED_FILES) - self.manifest.get("files", {}).keys()
+        if missing:
+            raise ValueError("功能分析参考资料缺少文件：" + ", ".join(sorted(missing)))
+        check_file(self.directory / "manifest.json", self.record)
+        for value in self.manifest["files"].values():
+            record = FileRecord.model_validate(value)
+            check_file(safe_child(self.directory, record.path), record)
 
     def frame(self, key: str) -> pl.DataFrame:
         record = FileRecord.model_validate(self.manifest["files"][key])
