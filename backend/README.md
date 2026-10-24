@@ -69,7 +69,7 @@ uv run tara-data --force
 | `environment_association` | 计算类群相对丰度与指定环境变量的 Spearman 相关 |
 | `community_analysis` | V4/V9 群落分布、多样性、环境关联、两成分 PLS 与四粒径 NMDS；依赖环境资料的步骤按准备情况开放 |
 
-数据服务配置有效的 `TARA_MATOU_DATA_DIR` 后，另提供 `find_function_samples`、`function_profile`、`function_atlas`、`function_study`、`compare_function_signals`、`retrieve_gene_sequences` 和 `function_environment`。支持候选功能谱、论文功能对照、采样编码对应的 DNA/RNA 相对信号描述及已准备序列查询；环境分析依赖相应资料包，跨库分析还需经过核验的样本映射。工具注册不保证资料前提满足，不提供 RNA/DNA 活性结论。
+数据服务配置有效的 `TARA_MATOU_DATA_DIR` 后，另提供 `find_function_samples`、`function_profile`、`function_atlas`、`compare_function_signals`、`retrieve_gene_sequences` 和 `function_environment`。`function_study` 额外要求该目录下的 `paper_task2` 资料包通过版本、必需文件及 SHA-256 检查后才注册；缺少该包时保留其他工具，已有但损坏的包须修复后才能启动。支持候选功能谱、论文功能对照、采样编码对应的 DNA/RNA 相对信号描述及已准备序列查询；环境分析依赖相应资料包，跨库分析还需经过核验的样本映射。不提供 RNA/DNA 活性结论。
 
 开发与解释结果时必须保留以下边界：
 
@@ -284,6 +284,21 @@ uv run python deploy/check_remote_data.py
 uv sync --locked
 uv run python deploy/prepare_function_reference.py --download --source-dir /tmp/tara-task2-sources --output-dir <MATOU目录>/paper_task2 --matou-dir <MATOU目录>
 ```
+
+公网出现“未准备论文功能参考资料”时，需在**实际执行计算的服务器后端**补齐资料，不能仅更新前端或在开发者电脑准备。Bash 中先将 `TARA_MATOU_DATA_DIR` 设置为该进程实际读取的派生目录，再执行：
+
+```bash
+# 已有完整资料时只检查；此命令不下载或写入。
+uv run --locked python deploy/prepare_function_reference.py --matou-dir "$TARA_MATOU_DATA_DIR" --check
+# 首次缺少资料时一次性准备，默认输出到上述目录的 paper_task2 子目录。
+uv run --locked python deploy/prepare_function_reference.py --matou-dir "$TARA_MATOU_DATA_DIR" --download
+```
+
+下载固定作者 commit 的公开文件并生成带摘要的资料；不会重新处理原始 MATOU 库。提供 `--matou-dir` 时还会扫描已准备的逐基因派生数据生成 LHC 亚家族缓存，需在独立准备阶段运行，不放入网页请求或每次启动。已有完整包直接核验复用，不联网、不重复计算；损坏或不匹配的已有包拒绝覆盖，应在独立新目录准备并按发布流程切换。新包在临时目录内完成全部转换和核验后才发布，失败不留下正式半成品。离线时仍可使用已下载的 `--source-dir` 和明确的 `--output-dir`。
+
+已有包没有可选的 `lhc_profiles` 时，重复准备命令也不会修改该包；需要亚家族分析时，提供新的 `--output-dir` 和当前 `--matou-dir` 准备完整新版，再按发布流程切换，不能覆盖运行中的资料。
+
+准备后，确认同一个 `paper_task2` 目录可从实际计算容器/进程内读取（只读挂载即可），再重启该计算服务和网站后端，刷新页面并新建一次分析。远程模式两端科学代码与依赖须一致；只重启浏览器不会刷新已绑定的数据清单。`/api/v1/health` 中的 `matou.paper_reference_ready=true` 是前提检查，还需运行下述独立工具验收和网页问题。`check_remote_matou.py` 仅验收样本查询和单样本功能，不证明 `function_study` 或环境分析就绪。不要用作者参考结果代替 `current_data` 输出。
 
 随后重启科学服务和本地后端，使代码、依赖和参考清单一致。MCP 默认 `source=current_data`；只有用户明确要求论文参考重算时使用 `source=paper_reference`，不能静默切换来源。服务未同步或资料未准备不等于任务已上线。
 

@@ -41,6 +41,27 @@ docker compose --env-file .env -f compose.yaml logs --tail 100 backend
 
 科学代码、计算依赖或数据版本变化时，还需按根目录 README 更新独立数据服务并重启本机开发后端。更新可能短暂停机；数据库结构有变化时，回滚前确认旧代码与迁移后的数据库兼容，不能只替换旧镜像。
 
+### 2.1 修复功能分析参考资料缺失
+
+报错 `Error executing tool function_study: 未准备论文功能参考资料` 表示实际计算服务未读到 `TARA_MATOU_DATA_DIR/paper_task2/manifest.json`。MATOU 量化数据已接入、网站 `/ready` 返回 200，均不证明这份功能辅助资料已经准备。它提供功能名称、合并规则所用描述、海区/环境信息及明确区分的作者参考表，不是要用参考答案代替当前数据。
+
+1. 确认网站是直接读取本机 MATOU，还是连接独立数据服务。远程模式在数据服务所在主机修复，本地模式在网站后端的数据主机修复；记录真实 MATOU 派生目录和容器挂载位置，不根据开发机路径猜测。
+2. 将新版本后端代码放入独立发布目录。进入含 `pyproject.toml` 的后端目录，使用已有锁定环境，在 Bash 执行：
+
+```bash
+export TARA_MATOU_DATA_DIR='<实际计算服务使用的MATOU派生目录>'
+uv run --locked python deploy/prepare_function_reference.py --matou-dir "$TARA_MATOU_DATA_DIR" --check
+# 仅在首次缺少资料时执行；已有完整包核验后复用，损坏包拒绝覆盖。
+uv run --locked python deploy/prepare_function_reference.py --matou-dir "$TARA_MATOU_DATA_DIR" --download
+```
+
+离线主机可使用已经核验的公开原文件配合 `--source-dir`，或由维护者传入完整资料包，再运行 `--check`。不要只复制 `manifest.json`。已有 LHC 缓存必须与当前 MATOU 清单摘要一致。
+
+3. 保证主机生成的 `paper_task2` 被挂载到计算进程实际的 MATOU 目录中；容器只读挂载无需改成可写。先在测试端口启动新版本验证。远程模式同步两端科学代码、锁定依赖，再重启数据服务及网站后端，保持现有数据库和数据卷。
+4. 在实际计算容器中也运行 `python deploy/prepare_function_reference.py --matou-dir '<容器内MATOU目录>' --check`。网站健康响应的 `matou.paper_reference_ready` 应为 `true`，再运行 [后端独立功能验收](../backend/README.md#论文图9图10功能对照)，最后新建对话询问“列出硅藻转录信号最高的 Top 100 功能，合并相关功能类别并报告相对贡献、样本覆盖和归一化方式”，确认结果、来源和完成状态。LHC 等项目未满足前提时仍须显示未完成。
+
+本次代码在启动时校验参考包，有 MATOU 但没有参考包时不会注册 `function_study`，其他工具保留。合并 PR 不会把服务器资料自动补齐；只有完成准备、挂载、重启和真实问题验收，才算公网修复完成。
+
 ## 3. 备份与停止
 
 需备份：数据库、私有 `.env` 和部署配置、独立保存的科学数据及版本清单。配置和备份含敏感信息，不提交 Git。

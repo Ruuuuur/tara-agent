@@ -24,33 +24,39 @@ from tara_agent.analysis.function_service import MatouFunctionService
 from tara_agent.analysis.function_signal_models import FunctionSignalResult
 from tara_agent.analysis.function_study import FunctionStudyService
 from tara_agent.analysis.function_study_models import FunctionStudyQuery, FunctionStudyResult
+from tara_agent.data.function_reference import FunctionReference
 from tara_agent.mcp.tools import READ_ONLY
 
 
 def register_function_tools(server: MCPServer, service: MatouFunctionService) -> None:
     atlas = MatouAtlasService(service.reader)
-    study = FunctionStudyService(service.reader)
     scope = (
         f"当前数据：{service.reader.manifest.dataset_version}，"
         f"已准备类群：{service.reader.manifest.selection['taxon']}。"
     )
 
-    @server.tool(
-        title="硅藻功能谱、粒径海区分布与环境PLS分析",
-        annotations=READ_ONLY,
-        description=scope
-        + (
-            "对应论文图9a/9b/9c和10b/10e，默认Top100；合并核糖体、泛素等作者功能类别。"
-            "current_data计算当前候选数据并附作者参考排名；paper_reference独立重算作者公开汇总表。"
-            "明确返回分母、来源、图号及每项完成状态；缺少LHC亚家族预计算时保留已完成结果。"
-            "需在MATOU目录内准备paper_task2资料包；不得把作者参考结果冒充当前数据。"
-        ),
-    )
-    def function_study(query: FunctionStudyQuery) -> FunctionStudyResult:
-        try:
-            return study.analyze(query)
-        except ValueError as error:
-            raise ToolError(str(error)) from error
+    # 只有必需资料完整时才开放；MATOU 已接入不等于所有分析前提均已满足。
+    if service.reader.reference_sha256 is not None:
+        reference = FunctionReference(service.reader.directory / "paper_task2")
+        reference.validate()
+        study = FunctionStudyService(service.reader, reference)
+
+        @server.tool(
+            title="硅藻功能谱、粒径海区分布与环境PLS分析",
+            annotations=READ_ONLY,
+            description=scope
+            + (
+                "对应论文图9a/9b/9c和10b/10e，默认Top100；合并核糖体、泛素等作者功能类别。"
+                "current_data计算当前候选数据并附作者参考排名；paper_reference独立重算作者公开汇总表。"
+                "明确返回分母、来源、图号及每项完成状态；缺少LHC亚家族预计算时保留已完成结果。"
+                "需在MATOU目录内准备paper_task2资料包；不得把作者参考结果冒充当前数据。"
+            ),
+        )
+        def function_study(query: FunctionStudyQuery) -> FunctionStudyResult:
+            try:
+                return study.analyze(query)
+            except ValueError as error:
+                raise ToolError(str(error)) from error
 
     @server.tool(
         title="查询候选功能分析样本",

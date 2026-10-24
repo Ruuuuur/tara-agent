@@ -23,6 +23,7 @@ from .test_data_service import service_settings as service_settings
 from .test_matou_function_data import dataset as dataset
 
 TOKEN = "matou-remote-test-token-0123456789abcdef"
+AVAILABLE_MATOU_TOOLS = MATOU_TOOLS - {ToolName.FUNCTION_STUDY}
 
 
 @pytest.fixture
@@ -86,7 +87,7 @@ async def test_remote_equals_mcp_with_actual_parent_tree_and_no_local_data(
         )
     )
     remote = RemoteToolGateway(local, transport=httpx.ASGITransport(app=app))
-    assert {t.name for t in await remote.list_tools()} == CORE_TOOLS | MATOU_TOOLS
+    assert {t.name for t in await remote.list_tools()} == CORE_TOOLS | AVAILABLE_MATOU_TOOLS
     assert await remote.call(tool, {"query": query}) == await gateway.call(tool, {"query": query})
     events = []
     parent = str(uuid4())
@@ -126,7 +127,8 @@ def test_mcp_schemas_are_read_only_and_health_has_version(matou_setup):
         assert status["taxon"] == "Example taxon"
         assert status["sample_counts"] == {"MetaG": 2, "MetaT": 1}
         tools = {t["name"]: t for t in client.get("/tools").json()}
-        for name in MATOU_TOOLS:
+        assert ToolName.FUNCTION_STUDY not in tools
+        for name in AVAILABLE_MATOU_TOOLS:
             assert tools[name]["input_schema"]["properties"]["query"]
         for invalid in (None, "0" * 64):
             request = body(
@@ -191,7 +193,7 @@ async def test_corrupt_artifact_returns_failure_tree_without_fallback(matou_setu
 
 class FunctionModel(RepresentativeModel):
     async def route(self, question, context, tools):
-        assert {t.name for t in tools} >= MATOU_TOOLS
+        assert {t.name for t in tools} >= AVAILABLE_MATOU_TOOLS
         return RouteDecision(
             kind="analysis",
             rationale="查询已准备的单样本候选功能。",
@@ -304,7 +306,7 @@ async def test_function_mcp_has_typed_output_and_read_only_annotations(matou_set
     async with Client(server) as client:
         listed = await client.list_tools()
     tools = {t.name: t for t in listed.tools}
-    for tool in MATOU_TOOLS:
+    for tool in AVAILABLE_MATOU_TOOLS:
         assert tools[tool].output_schema
         assert tools[tool].annotations.read_only_hint
         assert tools[tool].annotations.open_world_hint is False

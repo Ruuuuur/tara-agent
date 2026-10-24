@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 from uuid import uuid4
 
-from tara_agent.agent.models import MATOU_TOOLS, ToolName
+from tara_agent.agent.models import ToolName
 from tara_agent.analysis.function_query_models import FunctionSamplesResult
 from tara_agent.analysis.function_signal_models import FunctionSignalResult
 from tara_agent.config import Settings
@@ -17,7 +17,9 @@ from tara_agent.observability.execution import bind_execution_trace
 
 async def verify(gateway: RemoteToolGateway, requested: dict[str, str | None]) -> dict:
     status = await gateway.get_status()
-    if status.matou is None or not {t.name for t in await gateway.list_tools()} >= MATOU_TOOLS:
+    # 此入口只验收这两项基础能力；不能用可选参考资料决定基础MATOU是否可用。
+    required = {ToolName.FIND_FUNCTION_SAMPLES, ToolName.FUNCTION_PROFILE}
+    if status.matou is None or not {t.name for t in await gateway.list_tools()} >= required:
         raise ValueError("远程服务未开放 MATOU 工具")
     checks = []
     for assay, sample_name in requested.items():
