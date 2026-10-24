@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Any, Protocol
 
 from openai import AsyncOpenAI, OpenAIError
+from pydantic import ValidationError
 
 from tara_agent.agent.context import build_answer_model_input
 from tara_agent.agent.conversation import conversation_context_payload
@@ -305,10 +306,12 @@ class DeepSeekChatModel:
                 decision = contract.model_validate(json.loads(calls[0].function.arguments))
             except (AttributeError, IndexError, TypeError, ValueError) as exc:
                 # 不记录原始回答、参数或校验值，避免在日志中泄漏用户内容。
+                feedback = _decision_validation_feedback(exc)
                 logging.getLogger("uvicorn.error").warning(
-                    "Decision validation failed decision=%s failure=%s attempt=%d",
+                    "Decision validation failed decision=%s failure=%s issues=%s attempt=%d",
                     name,
                     type(exc).__name__,
+                    ",".join(dict.fromkeys(item["type"] for item in feedback)),
                     attempt + 1,
                 )
                 if attempt == 1:
@@ -320,6 +323,9 @@ class DeepSeekChatModel:
                         "content": (
                             "The previous response failed structural validation "
                             f"({type(exc).__name__}). "
+                            "Correct these validation errors: "
+                            + json.dumps(feedback, ensure_ascii=False)
+                            + ". "
                             f"Return exactly one {name} function call "
                             "with arguments matching its schema. "
                             "Use only the supplied context and verified evidence. "
@@ -401,6 +407,28 @@ class DeepSeekChatModel:
             raise AgentModelError(f"DeepSeek answer was incomplete ({finish_reason})")
         if not received_content:
             raise AgentModelError("DeepSeek returned an empty answer")
+
+
+def _decision_validation_feedback(error: Exception) -> list[dict[str, str]]:
+    """只回传字段位置与约束，不回显无效值、原始回答或异常堆栈。"""
+    if isinstance(error, ValidationError):
+        return [
+            {
+                "path": ".".join(map(str, item["loc"])) or "$",
+                "type": item["type"],
+                "message": item["msg"][:300],
+            }
+            for item in error.errors(include_input=False, include_context=False)[:5]
+        ]
+    if isinstance(error, json.JSONDecodeError):
+        return [{"path": "$", "type": "json_invalid", "message": "Arguments must be valid JSON."}]
+    return [
+        {
+            "path": "tool_calls",
+            "type": "single_function_call_required",
+            "message": "Return exactly one call to the requested function.",
+        }
+    ]
 
 
 def _schema_for_model(value: Any) -> Any:

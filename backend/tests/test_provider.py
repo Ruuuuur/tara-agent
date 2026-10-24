@@ -590,3 +590,97 @@ async def test_structured_decision_accepts_valid_response_without_correction():
     assert result.workflow == "single_step"
     assert len(completions.requests) == 1
     assert result.usage is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "invalid, expected_path, expected_type",
+    [
+        (
+            {"workflow": "private-invalid-marker", "rationale": "Select analysis"},
+            "workflow",
+            "literal_error",
+        ),
+        (
+            {
+                "workflow": "multi_step",
+                "rationale": "Analyze goals",
+                "goals": [{"description": "private-invalid-marker"}],
+            },
+            "goals.0",
+            "string_type",
+        ),
+        (
+            {"workflow": "single_step", "rationale": "private-invalid-marker" * 30},
+            "rationale",
+            "string_too_long",
+        ),
+        (
+            {"workflow": "multi_step", "rationale": "Select analysis", "goals": []},
+            "$",
+            "value_error",
+        ),
+    ],
+)
+async def test_decision_correction_identifies_constraint_without_echoing_invalid_values(
+    invalid, expected_path, expected_type, caplog
+):
+    completions = DecisionSequence(
+        [
+            decision_response([tool_call("select_analysis_workflow", json.dumps(invalid))]),
+            decision_response(valid_selection()),
+        ]
+    )
+    result = await model_with(completions).select_workflow(
+        "private-question-marker", ConversationContext(), []
+    )
+    assert result.workflow == "single_step"
+    feedback = completions.requests[1]["messages"][-1]["content"]
+    details = json.loads(
+        feedback.split("Correct these validation errors: ", 1)[1].split(". Return exactly", 1)[0]
+    )
+    assert details[0]["path"] == expected_path
+    assert details[0]["type"] == expected_type
+    assert details[0]["message"]
+    assert "private-invalid-marker" not in feedback
+    assert "private-invalid-marker" not in caplog.text
+    assert "private-question-marker" not in caplog.text
+
+
+@pytest.mark.anyio
+async def test_multistep_correction_preserves_original_verified_context_and_budget():
+    completions = DecisionSequence(
+        [
+            decision_response(
+                [tool_call("analysis_next_step", '{"action":"tool","rationale":"Query"}')]
+            ),
+            decision_response(
+                [
+                    tool_call(
+                        "analysis_next_step",
+                        json.dumps(
+                            {
+                                "action": "stop",
+                                "rationale": "No further tool is available",
+                                "message": "More data is needed",
+                            }
+                        ),
+                    )
+                ]
+            ),
+        ]
+    )
+    steps = [{"step_id": 1, "result": {"sample_count": 3}}]
+    budget = {"tool_calls": 5, "seconds": 100}
+    result = await model_with(completions).next_analysis_step(
+        "Explain the result", ConversationContext(), [], steps, budget
+    )
+    assert result.action == "stop"
+    assert len(completions.requests) == 2
+    initial = completions.requests[0]["messages"]
+    retried = completions.requests[1]["messages"]
+    assert retried[: len(initial)] == initial
+    payload = json.loads(retried[1]["content"])
+    assert payload["verified_steps"] == steps
+    assert payload["remaining_budget"] == budget
+    assert '"type": "value_error"' in retried[-1]["content"]
