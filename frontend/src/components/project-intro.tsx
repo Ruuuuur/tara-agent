@@ -10,7 +10,7 @@ type ProjectIntroProps = { variant: "auth" | "workspace" };
 const resources = [
   {
     name: "Tara Oceans",
-    href: "https://www.tara-oceans-science.org/tara-oceans-expedition/",
+    href: "https://fondationtaraocean.org/en/expedition/tara-oceans/",
     description: "了解 Tara Oceans 航次与研究背景",
   },
   {

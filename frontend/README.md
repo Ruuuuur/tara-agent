@@ -100,6 +100,8 @@ pnpm build
 
 团队规范与后续方向见 [AGENTS.md](../AGENTS.md) 和[项目方案](../tara-agent方案文档.md)。
 
+首页底部的 Tara Oceans 资源链接使用 Tara 基金会英文航次介绍页：`https://fondationtaraocean.org/en/expedition/tara-oceans/`。链接供用户在独立标签页阅读背景资料，不影响本机分析或数据服务连接。
+
 
 PLS 相关圆直接显示全部环境变量和响应指标名称。拥挤标签按原纵坐标在圆左右两侧排开，细线连接原始点；文字位置不是新的变量坐标。圆内向量从原点指向变量坐标。MetaG 与 MetaT 分别用橙色与红色，环境变量为蓝色；非功能群落响应继续使用独立响应颜色。网页和PNG导出共用同一图层，不改变科学坐标或输入数据。
 
