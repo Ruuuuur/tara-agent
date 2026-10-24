@@ -106,6 +106,7 @@ class DeepSeekChatModel:
             "router": {
                 "max_tokens": 1_000,
                 "thinking": "disabled",
+                "max_format_corrections": 1,
             },
             "planner": {
                 "max_tokens": 1_200,
@@ -125,7 +126,10 @@ class DeepSeekChatModel:
         context: ConversationContext,
         tools: list[ToolDefinition],
     ) -> RouteDecision:
-        user_content = json.dumps(
+        return await self._structured_decision(
+            "route_request",
+            RouteDecision,
+            ROUTER_SYSTEM_PROMPT + _language_instruction(context.answer_language),
             {
                 "question": question,
                 "conversation_context": conversation_context_payload(context),
@@ -134,41 +138,13 @@ class DeepSeekChatModel:
                     {"name": tool.name.value, "description": tool.description} for tool in tools
                 ],
             },
-            ensure_ascii=False,
+            function=_route_function(
+                [str(reference.trace_id) for reference in context.analysis_references]
+            ),
+            max_tokens=1_000,
+            invalid_message="DeepSeek returned an invalid route decision",
+            request_error_message="DeepSeek routing request failed",
         )
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            ROUTER_SYSTEM_PROMPT + _language_instruction(context.answer_language)
-                        ),
-                    },
-                    {"role": "user", "content": user_content},
-                ],
-                tools=[
-                    _route_function(
-                        [str(reference.trace_id) for reference in context.analysis_references]
-                    )
-                ],
-                tool_choice="required",
-                max_tokens=1_000,
-                extra_body={"thinking": {"type": "disabled"}},
-            )
-        except OpenAIError as exc:
-            raise AgentModelError("DeepSeek routing request failed") from exc
-
-        tool_calls = response.choices[0].message.tool_calls or []
-        if len(tool_calls) != 1 or tool_calls[0].function.name != "route_request":
-            raise AgentModelError("DeepSeek must return one route_request call")
-        try:
-            values = json.loads(tool_calls[0].function.arguments)
-            decision = RouteDecision.model_validate(values)
-        except (AttributeError, TypeError, ValueError) as exc:
-            raise AgentModelError("DeepSeek returned an invalid route decision") from exc
-        return decision.model_copy(update={"usage": _model_usage(getattr(response, "usage", None))})
 
     async def plan(
         self,
@@ -265,9 +241,29 @@ class DeepSeekChatModel:
             },
         )
 
-    async def _structured_decision(self, name, contract, prompt, payload):
-        schema = contract.model_json_schema()
-        schema["properties"].pop("usage", None)
+    async def _structured_decision(
+        self,
+        name,
+        contract,
+        prompt,
+        payload,
+        *,
+        function=None,
+        max_tokens=2000,
+        invalid_message="模型返回了无效的分析决定",
+        request_error_message="模型服务暂时不可用，请稍后重试。",
+    ):
+        if function is None:
+            schema = contract.model_json_schema()
+            schema["properties"].pop("usage", None)
+            function = {
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": prompt,
+                    "parameters": _schema_for_model(schema),
+                },
+            }
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
@@ -279,25 +275,16 @@ class DeepSeekChatModel:
                 response = await self.client.chat.completions.create(
                     model=self.name,
                     messages=messages,
-                    tools=[
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": name,
-                                "description": prompt,
-                                "parameters": _schema_for_model(schema),
-                            },
-                        }
-                    ],
+                    tools=[function],
                     tool_choice="required",
-                    max_tokens=2000,
+                    max_tokens=max_tokens,
                     extra_body={"thinking": {"type": "disabled"}},
                 )
             except OpenAIError as exc:
                 logging.getLogger("uvicorn.error").warning(
                     "Decision API failed decision=%s failure=%s", name, type(exc).__name__
                 )
-                raise AgentModelError("模型服务暂时不可用，请稍后重试。") from exc
+                raise AgentModelError(request_error_message) from exc
             usages.append(_model_usage(getattr(response, "usage", None)))
             try:
                 calls = response.choices[0].message.tool_calls or []
@@ -315,7 +302,7 @@ class DeepSeekChatModel:
                     attempt + 1,
                 )
                 if attempt == 1:
-                    raise AgentModelError("模型返回了无效的分析决定") from exc
+                    raise AgentModelError(invalid_message) from exc
                 messages = [
                     *messages,
                     {
