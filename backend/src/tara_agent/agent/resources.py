@@ -121,11 +121,14 @@ MULTI_PLANNER_PROMPT_RESOURCE = _resource(
 CAPABILITY_RESOURCE = _resource("capability.tara_agent", "1.7.0", CAPABILITY_PROFILE)
 WORKFLOW_RESOURCE = _resource(
     "workflow.tara_agent_request",
-    "1.6.0",
+    "1.8.0",
     "route -> analysis[select_workflow -> single(understand -> execute -> answer) | "
     "multi(plan -> execute -> plan, finish/clarify/stop -> answer)] | respond; "
     "multi defaults: 6 tool calls, 8 planning turns, 240 seconds, no identical calls; "
     "pre-execution contract feedback: at most 2 corrections; "
+    "route and structured workflow decisions: at most 1 format correction "
+    "with field/constraint feedback, "
+    "without replaying invalid values; API failures and cancellation are not retried; "
     "finish requires fixed-goal coverage and references to verified steps; "
     "blocked goals are partial; single planner multi-tool proposals escalate to "
     "bounded multi-step without execution",

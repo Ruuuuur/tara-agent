@@ -590,3 +590,239 @@ async def test_structured_decision_accepts_valid_response_without_correction():
     assert result.workflow == "single_step"
     assert len(completions.requests) == 1
     assert result.usage is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "invalid, expected_path, expected_type",
+    [
+        (
+            {"workflow": "private-invalid-marker", "rationale": "Select analysis"},
+            "workflow",
+            "literal_error",
+        ),
+        (
+            {
+                "workflow": "multi_step",
+                "rationale": "Analyze goals",
+                "goals": [{"description": "private-invalid-marker"}],
+            },
+            "goals.0",
+            "string_type",
+        ),
+        (
+            {"workflow": "single_step", "rationale": "private-invalid-marker" * 30},
+            "rationale",
+            "string_too_long",
+        ),
+        (
+            {"workflow": "multi_step", "rationale": "Select analysis", "goals": []},
+            "$",
+            "value_error",
+        ),
+    ],
+)
+async def test_decision_correction_identifies_constraint_without_echoing_invalid_values(
+    invalid, expected_path, expected_type, caplog
+):
+    completions = DecisionSequence(
+        [
+            decision_response([tool_call("select_analysis_workflow", json.dumps(invalid))]),
+            decision_response(valid_selection()),
+        ]
+    )
+    result = await model_with(completions).select_workflow(
+        "private-question-marker", ConversationContext(), []
+    )
+    assert result.workflow == "single_step"
+    feedback = completions.requests[1]["messages"][-1]["content"]
+    details = json.loads(
+        feedback.split("Correct these validation errors: ", 1)[1].split(". Return exactly", 1)[0]
+    )
+    assert details[0]["path"] == expected_path
+    assert details[0]["type"] == expected_type
+    assert details[0]["message"]
+    assert "private-invalid-marker" not in feedback
+    assert "private-invalid-marker" not in caplog.text
+    assert "private-question-marker" not in caplog.text
+
+
+@pytest.mark.anyio
+async def test_multistep_correction_preserves_original_verified_context_and_budget():
+    completions = DecisionSequence(
+        [
+            decision_response(
+                [tool_call("analysis_next_step", '{"action":"tool","rationale":"Query"}')]
+            ),
+            decision_response(
+                [
+                    tool_call(
+                        "analysis_next_step",
+                        json.dumps(
+                            {
+                                "action": "stop",
+                                "rationale": "No further tool is available",
+                                "message": "More data is needed",
+                            }
+                        ),
+                    )
+                ]
+            ),
+        ]
+    )
+    steps = [{"step_id": 1, "result": {"sample_count": 3}}]
+    budget = {"tool_calls": 5, "seconds": 100}
+    result = await model_with(completions).next_analysis_step(
+        "Explain the result", ConversationContext(), [], steps, budget
+    )
+    assert result.action == "stop"
+    assert len(completions.requests) == 2
+    initial = completions.requests[0]["messages"]
+    retried = completions.requests[1]["messages"]
+    assert retried[: len(initial)] == initial
+    payload = json.loads(retried[1]["content"])
+    assert payload["verified_steps"] == steps
+    assert payload["remaining_budget"] == budget
+    assert '"type": "value_error"' in retried[-1]["content"]
+
+
+def valid_route_calls(kind="analysis"):
+    return [
+        tool_call(
+            "route_request",
+            json.dumps(
+                {
+                    "kind": kind,
+                    "rationale": "Handle the requested task",
+                    "response": "" if kind == "analysis" else "Please specify the marker",
+                    "capability_requirements": ["function_study"] if kind == "analysis" else [],
+                    "analysis_reference_ids": [],
+                }
+            ),
+        )
+    ]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        [],
+        [tool_call("wrong_route", "{}")],
+        [tool_call("route_request", "not-json")],
+        [tool_call("route_request", '{"kind":"private-invalid-kind"}')],
+        [
+            tool_call(
+                "route_request",
+                json.dumps({"kind": "analysis", "rationale": "private-long-rationale" * 30}),
+            )
+        ],
+    ],
+)
+async def test_router_corrects_once_preserving_schema_language_and_actual_usage(invalid, caplog):
+    usage = SimpleNamespace(prompt_tokens=100, completion_tokens=20, total_tokens=120)
+    completions = DecisionSequence(
+        [decision_response(invalid, usage), decision_response(valid_route_calls(), usage)]
+    )
+    model = model_with(completions)
+    context = ConversationContext(answer_language="en")
+    result = await model.route("private-question-marker", context, [])
+    assert result.kind == "analysis"
+    assert result.usage.total_tokens == 240
+    assert result.usage.input_tokens == 200
+    first, second = completions.requests
+    assert first["tools"] == second["tools"]
+    references = second["tools"][0]["function"]["parameters"]["properties"][
+        "analysis_reference_ids"
+    ]
+    assert references["maxItems"] == 0
+    assert second["max_tokens"] == model.trace_parameters["router"]["max_tokens"] == 1000
+    assert model.trace_parameters["router"]["max_format_corrections"] == 1
+    assert "必须使用English" in second["messages"][0]["content"]
+    assert second["messages"][:2] == first["messages"]
+    assert "Correct these validation errors" in second["messages"][-1]["content"]
+    assert "private-question-marker" not in caplog.text
+    assert "private-invalid-kind" not in caplog.text
+    assert "private-long-rationale" not in caplog.text
+    assert "decision=route_request" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_router_corrects_empty_clarification_without_forcing_analysis():
+    invalid = [tool_call("route_request", '{"kind":"clarify","rationale":"Missing marker"}')]
+    completions = DecisionSequence(
+        [decision_response(invalid), decision_response(valid_route_calls("clarify"))]
+    )
+    result = await model_with(completions).route("Which marker?", ConversationContext(), [])
+    assert result.kind == "clarify"
+    assert result.response == "Please specify the marker"
+
+
+@pytest.mark.anyio
+async def test_router_rejects_second_invalid_response_and_keeps_legacy_error():
+    completions = DecisionSequence(
+        [decision_response([]), decision_response([tool_call("route_request", "not-json")])]
+    )
+    with pytest.raises(AgentModelError, match="DeepSeek returned an invalid route decision"):
+        await model_with(completions).route("Question", ConversationContext(), [])
+    assert len(completions.requests) == 2
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("failure", [OpenAIError("private-api-error"), asyncio.CancelledError()])
+async def test_router_does_not_repeat_api_failure_or_cancellation(failure, caplog):
+    completions = DecisionSequence([failure])
+    expected = (
+        asyncio.CancelledError if isinstance(failure, asyncio.CancelledError) else AgentModelError
+    )
+    with pytest.raises(expected):
+        await model_with(completions).route("Question", ConversationContext(), [])
+    assert len(completions.requests) == 1
+    assert "private-api-error" not in caplog.text
+
+
+@pytest.mark.anyio
+async def test_router_correction_preserves_history_reference_allowlist():
+    reference_id = uuid4()
+    context = ConversationContext(
+        analysis_references=[
+            AnalysisReference(
+                trace_id=reference_id,
+                question="Find samples",
+                answer="One sample found",
+                tool_name="find_samples",
+                tool_arguments={"query": {"limit": 1}},
+                result_summary={"total": 1},
+            )
+        ]
+    )
+    invalid = [
+        tool_call(
+            "route_request",
+            json.dumps(
+                {
+                    "kind": "analysis",
+                    "rationale": "Continue the analysis",
+                    "analysis_reference_ids": ["not-a-uuid"],
+                }
+            ),
+        )
+    ]
+    valid = [
+        tool_call(
+            "route_request",
+            json.dumps(
+                {
+                    "kind": "analysis",
+                    "rationale": "Continue the analysis",
+                    "analysis_reference_ids": [str(reference_id)],
+                }
+            ),
+        )
+    ]
+    completions = DecisionSequence([decision_response(invalid), decision_response(valid)])
+    result = await model_with(completions).route("Continue", context, [])
+    assert result.analysis_reference_ids == [reference_id]
+    assert completions.requests[0]["tools"] == completions.requests[1]["tools"]
+    properties = completions.requests[1]["tools"][0]["function"]["parameters"]["properties"]
+    assert properties["analysis_reference_ids"]["items"]["enum"] == [str(reference_id)]

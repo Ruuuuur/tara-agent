@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -27,6 +28,52 @@ from tara_agent.data.preprocess import preprocess
 from tara_agent.data.reader import ProcessedDataReader
 from tara_agent.mcp import create_server
 from tara_agent.observability.execution import TraceObservationEvent
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("corrected", [True, False])
+async def test_router_format_correction_never_repeats_scientific_execution(
+    tara_agent, monkeypatch, corrected
+):
+    from tara_agent.agent.provider import AgentModelError
+
+    from .test_provider import DecisionSequence, decision_response, model_with, tool_call
+
+    valid = [
+        tool_call(
+            "route_request",
+            json.dumps(
+                {
+                    "kind": "analysis",
+                    "rationale": "Find one sample",
+                    "response": "",
+                    "capability_requirements": ["sample_query"],
+                    "analysis_reference_ids": [],
+                }
+            ),
+        )
+    ]
+    completions = DecisionSequence(
+        [decision_response([]), decision_response(valid if corrected else [])]
+    )
+    monkeypatch.setattr(tara_agent.model, "route", model_with(completions).route)
+    original_call = tara_agent.gateway.call
+    calls = []
+
+    async def record_call(tool_name, arguments):
+        calls.append(tool_name)
+        return await original_call(tool_name, arguments)
+
+    monkeypatch.setattr(tara_agent.gateway, "call", record_call)
+    if corrected:
+        response = await tara_agent.run("找一个 Tara 样本")
+        assert response.tool.name is ToolName.FIND_SAMPLES
+        assert calls == [ToolName.FIND_SAMPLES]
+    else:
+        with pytest.raises(AgentModelError, match="invalid route decision"):
+            await tara_agent.run("找一个 Tara 样本")
+        assert calls == []
+    assert len(completions.requests) == 2
 
 
 class RepresentativeModel(AgentModel):
