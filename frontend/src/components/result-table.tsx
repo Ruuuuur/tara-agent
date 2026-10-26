@@ -7,7 +7,7 @@ import { ChevronDown, Table2, Download } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import { downloadCsv, downloadFasta } from "@/lib/downloads";
-import { taxonomyCellValue } from "@/lib/taxonomy-label";
+import { resultCellValue } from "@/lib/result-cell-value";
 import { useResponseCard } from "@/components/response-card-group";
 import { ArtifactHeading } from "@/components/artifact-heading";
 import { artifactSummary } from "@/lib/artifact-summary";
@@ -76,7 +76,7 @@ export function ResultTableSection({ label, rows, scope, sources }: Omit<ResultR
               {visibleRows.map((row, index) => (
                 <tr key={currentPage * pageSize + index}>
                   {columns.map((column) => {
-                    const value = taxonomyCellValue(column, row, language);
+                    const value = resultCellValue(column, row, language);
                     return <td key={column} data-column={column} title={typeof value === "string" ? value : undefined}>{column === "sequence" && typeof value === "string"
                       ? <details><summary>{value.length} {contentText("个碱基")}</summary><pre>{value}</pre></details>
                       : formatCell(column, value, contentText)}</td>;

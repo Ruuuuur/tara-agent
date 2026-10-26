@@ -66,6 +66,14 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
    }
    const cards=page.locator('.response-card-controls button').first(); await cards.click(); await cards.click();
    if(item.charts.length)await page.waitForFunction(n=>[...document.querySelectorAll('.js-plotly-plot')].filter(el=>el._fullLayout).length===n,item.charts.length,{timeout:45000});
+   if(item.id==='function-study'){
+    const notes=await page.locator('.analysis-notes').innerText();
+    const title=contentLanguage==='en'?'LHC subfamilies environmental PLS correlation circle (246 groups)':'LHC亚家族 环境PLS相关圆（246组）';
+    if(!await page.getByText(title,{exact:false}).count())throw new Error('Expected localized screenshot LHC title');
+    const target=page.locator('td[data-column=target]').filter({hasText:contentLanguage==='en'?'LHC subfamilies':'LHC亚家族'});
+    if(!await target.count()||await target.first().getAttribute('title')!==(contentLanguage==='en'?'LHC subfamilies':'LHC亚家族'))throw new Error('LHC target cell and tooltip must use response language');
+    if(contentLanguage==='en'&&(!notes.includes('retained functions are not renormalized again')||!notes.includes('these percentages are not fractions of total diatom transcript signal')))throw new Error('Both paper denominator branches must retain their distinct English meanings');
+   }
    if(item.id==='taxonomy'){
     const unresolved=page.locator('td[data-column="taxon_label"]').filter({hasText:contentLanguage==='en'?'Unresolved genus':'未鉴定到属'}).first();
     const expected=contentLanguage==='en'?'Unresolved genus (Root;Eukaryota;Stramenopiles;Ochrophyta;Bacillariophyta;unclassified_X)':'未鉴定到属（Root;Eukaryota;Stramenopiles;Ochrophyta;Bacillariophyta;unclassified_X）';

@@ -68,6 +68,14 @@
     "message": "NMDS采用固定种子单调SMACOF、Bray–Curtis和Stress1；不声称与vegan metaMDS的随机坐标、自动转换或论文stress完全一致。"
   },
   {
+    "code": "paper_denominator_difference",
+    "message": "论文图注称以硅藻总转录信号为分母；作者图9脚本以筛选后Pfam汇总信号归一化。当前榜单按作者脚本二次归一化，不是全部硅藻总转录量中的百分比。"
+  },
+  {
+    "code": "paper_denominator_difference",
+    "message": "论文图注称以硅藻总转录信号为分母；作者图9脚本以筛选后Pfam汇总信号归一化。当前榜单按全部已提供硅藻基因信号归一化后等权平均，保留功能不再二次归一化。"
+  },
+  {
     "code": "ranking_scope",
     "message": "总体排名按有正分母的原始样本等权计算已观测贡献，未出现记录不补为生物学零；观测覆盖同时报告。未合并重复采样或近似粒径，不是论文图9的精确复现。"
   },

@@ -70,3 +70,16 @@ test("all captured backend fixed Chinese warnings translate without mutating sci
     assert.equal(warningMessage(detailed, "en"), detailed.message);
   }
 });
+
+test("both conditional paper denominator notes preserve their distinct scientific meanings", () => {
+  const variants = backendWarnings.filter(warning => warning.code === "paper_denominator_difference");
+  assert.equal(variants.length, 2);
+  const current = variants.find(warning => warning.message.includes("保留功能不再二次归一化"))!;
+  const author = variants.find(warning => warning.message.includes("当前榜单按作者脚本二次归一化"))!;
+  assert.match(warningMessage(current, "en"), /retained functions are not renormalized again/);
+  assert.match(warningMessage(author, "en"), /these percentages are not fractions of total diatom transcript signal/);
+  for (const warning of variants) {
+    assert.equal(warningMessage(warning, "zh"), warning.message);
+    assert.equal(warningMessage({ ...warning, code: "unknown_scientific_note" }, "en"), warning.message);
+  }
+});

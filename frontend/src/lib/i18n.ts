@@ -55,7 +55,7 @@ export function translateLabel(text: string, language: Language): string {
   const allocation = /^Top (\d+) 功能(粒径|海区)分配$/.exec(text);
   if (allocation) return `Top ${allocation[1]} function allocation by ${allocation[2] === "粒径" ? "size fraction" : "ocean region"}`;
   const plsCircle = /^(.+) 环境PLS相关圆（(\d+)组）$/.exec(text);
-  if (plsCircle) return `${plsCircle[1]} environmental PLS correlation circle (${plsCircle[2]} groups)`;
+  if (plsCircle) return `${translateLabel(plsCircle[1], language)} environmental PLS correlation circle (${plsCircle[2]} groups)`;
   const pls = /^环境PLS（(\d+)组）$/.exec(text);
   if (pls) return `Environmental PLS (${pls[1]} groups)`;
   const nmds = /^四粒径NMDS（Stress1=([^）]+)）$/.exec(text);

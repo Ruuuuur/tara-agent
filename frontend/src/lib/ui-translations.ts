@@ -491,6 +491,7 @@ export const english: Record<string, string> = {
   "堆叠比例图": "Stacked proportion chart",
   "散点图": "Scatter plot",
   "PLS相关圆图": "PLS correlation circle",
+  "LHC亚家族": "LHC subfamilies",
   "NMDS排序图": "NMDS ordination",
   "相关性热图": "Correlation heatmap",
   "按站点汇总": "Aggregated by station",

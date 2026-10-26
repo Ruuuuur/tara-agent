@@ -72,6 +72,8 @@ const messages: Record<string, [string, string]> = {
 
 // 同一提示代码在不同分析服务中保留过不同完整表述；按原句匹配，未知附加诊断仍原样显示。
 const messageVariants: Array<[string, string, string]> = [
+  ["paper_denominator_difference", "论文图注称以硅藻总转录信号为分母；作者图9脚本以筛选后Pfam汇总信号归一化。当前榜单按全部已提供硅藻基因信号归一化后等权平均，保留功能不再二次归一化。", "The paper caption describes normalization by total diatom transcript signal, while the authors' Figure 9 script renormalizes the filtered aggregate Pfam signal. The current ranking is normalized by all supplied diatom gene signals and then averaged with equal weights; retained functions are not renormalized again."],
+  ["paper_denominator_difference", "论文图注称以硅藻总转录信号为分母；作者图9脚本以筛选后Pfam汇总信号归一化。当前榜单按作者脚本二次归一化，不是全部硅藻总转录量中的百分比。", "The paper caption describes normalization by total diatom transcript signal, while the authors' Figure 9 script renormalizes the filtered aggregate Pfam signal. The current ranking follows the authors' secondary normalization; these percentages are not fractions of total diatom transcript signal."],
   ["candidate_annotation", "Pfam 是候选结构域关联，不证明生物学功能；统一 E 条件不替代家族 gathering 阈值。", "Pfam indicates candidate domain associations, not established biological function. A uniform E-value criterion does not replace family-specific gathering thresholds."],
   ["candidate_annotation", "结果描述候选 Pfam 关联，不证明生物学功能或解决翻译框冲突。", "Results describe candidate Pfam associations; they do not establish biological function or resolve reading-frame conflicts."],
   ["candidate_evalue_condition", "统一 i-Evalue 条件不是 Pfam 家族的官方 gathering 阈值。", "The uniform i-Evalue criterion is not the official family-specific Pfam gathering threshold."],

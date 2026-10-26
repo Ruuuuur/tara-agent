@@ -57,12 +57,25 @@ const titles = [
   "图9b对照 · 当前数据 · Top 100 功能粒径分配",
   "图9c对照 · 当前数据 · Top 100 功能海区分配",
   "图10b对照 · 当前数据 · DUF285 环境PLS相关圆（31组）",
+  "图10e对照 · 当前数据 · LHC亚家族 环境PLS相关圆（246组）",
+  "图10e对照 · 作者参考重算 · LHC亚家族 环境PLS相关圆（12组）",
   "temperature与PF00069 MetaG信号",
   "PF00069 采样编码对应的相对功能信号",
   "temperature 与相对丰度",
   "本次返回站点的相对丰度均值",
   "本次返回站点的相对丰度最大值",
 ];
+test("screenshot LHC target is translated inside the PLS template without changing chart data", () => {
+  const original = chart("图10e对照 · 当前数据 · LHC亚家族 环境PLS相关圆（246组）");
+  const shown = chartPresentation(original, "en");
+  assert.equal(shown.title, "Current data · LHC subfamilies environmental PLS correlation circle (246 groups)");
+  assert.equal(translateLabel("LHC亚家族", "en"), "LHC subfamilies");
+  assert.strictEqual(shown.x, original.x);
+  assert.strictEqual(shown.y, original.y);
+  assert.strictEqual(shown.labels, original.labels);
+  assert.strictEqual(shown.series, original.series);
+  assert.strictEqual(chartPresentation(original, "zh"), original);
+});
 for (const title of titles) {
   test(`complete dynamic chart display: ${title}`, () => {
     const displayed = chartPresentation(chart(title), "en");

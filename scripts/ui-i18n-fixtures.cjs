@@ -18,4 +18,23 @@ const cases=[
 // 从后端真实固定原句生成，覆盖所有数据说明，而不只覆盖常用样例。
 const backendWarnings=require('../frontend/tests/fixtures/backend-warning-messages.json');
 cases[0].warnings=backendWarnings.map(warning=>({...warning,details:{}}));
+// 覆盖截图中的内层目标名与运行时拼接的分母说明，不只测 DUF285/固定常量。
+const functionStudy=cases.find(item=>item.id==='function-study');
+functionStudy.result.query={source:'current_data',normalization:'taxon_total',assay:'MetaT'};
+functionStudy.result.pls_results.push({...pls,figure:'10e',target:'LHC亚家族',sample_count:246});
+functionStudy.charts.push(chart('correlation_circle','图10e对照 · 当前数据 · LHC亚家族 环境PLS相关圆（246组）',{
+ x:[0.5,-0.3],y:[0.2,0.6],labels:['temperature','LHCf'],
+ series:[{name:'environment',indices:[0]},{name:'response',indices:[1]}],
+ x_label:'成分1相关',y_label:'成分2相关',artifact_key:'pls_results',
+}));
+functionStudy.result.sections=[
+ {figure:'9a',output:'功能排名与相对转录贡献',status:'completed',reason:null},
+ {figure:'9b',output:'粒径分配',status:'completed',reason:null},
+ {figure:'9c',output:'海区分配',status:'completed',reason:null},
+ {figure:'10b',output:'DUF285环境关联',status:'completed',reason:null},
+ {figure:'10e',output:'LHC亚家族环境关联',status:'completed',reason:null},
+];
+functionStudy.result.excluded_samples=[{sample_id:'TARA_001',reason:'水层或实验协议不在当前方法范围'}];
+functionStudy.warnings=backendWarnings.filter(warning=>['paper_denominator_difference','nonexclusive_domains','reference_scope'].includes(warning.code)).map(warning=>({...warning,details:{}}));
+
 module.exports={cases};
