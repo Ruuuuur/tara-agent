@@ -752,7 +752,7 @@ function CompletedArtifacts({
       ) : null}
 
       {groups.map((group, index) => (
-        <section className="core-result-group" key={group} aria-label={group}>
+        <section className="core-result-group" key={group} aria-label={label(group)}>
           {group !== "核心结果" ? <h3>{index + 1}. {label(group)}</h3> : null}
           {primary.filter((choice) => (choice.group ?? "核心结果") === group).map(renderArtifact)}
         </section>

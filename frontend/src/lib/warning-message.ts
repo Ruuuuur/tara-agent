@@ -1,4 +1,4 @@
-import type { Language } from "./i18n";
+import { translateUi, type Language } from "./i18n";
 import type { ResultWarning } from "./types";
 
 // 只翻译已知代码对应的完整应用提示，避免改写科学数据和未知诊断。
@@ -137,7 +137,7 @@ export function warningMessage(warning: Pick<ResultWarning, "code" | "message">,
     for (const [source, target] of failurePrefixes) {
       if (warning.message.startsWith(source)) {
         const detail = warning.message.slice(source.length);
-        return target + (Object.hasOwn(failureReasons, detail) ? failureReasons[detail] : detail);
+        return target + (Object.hasOwn(failureReasons, detail) ? failureReasons[detail] : translateUi(detail, language));
       }
     }
   }

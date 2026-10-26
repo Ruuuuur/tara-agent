@@ -83,3 +83,12 @@ test("both conditional paper denominator notes preserve their distinct scientifi
     assert.equal(warningMessage({ ...warning, code: "unknown_scientific_note" }, "en"), warning.message);
   }
 });
+
+test("partial tool failures translate fixed diagnostics and retain unknown scientific details", () => {
+  const prefix = "步骤未完成，已停止且不自动重试：";
+  const english = warningMessage({code: "analysis_incomplete", message: prefix + "NMDS超过500组资源保护上限，请明确缩小样本范围"}, "en");
+  assert.doesNotMatch(english, /[\u3400-\u9fff]/);
+  assert.match(english, /500 groups/);
+  const raw = "未知诊断 PF00069 0.25";
+  assert.ok(warningMessage({code: "analysis_incomplete", message: prefix + raw}, "en").endsWith(raw));
+});

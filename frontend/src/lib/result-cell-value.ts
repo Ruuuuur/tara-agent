@@ -1,4 +1,4 @@
-import type { Language } from "./i18n";
+import { translateLabel, translateUi, type Language } from "./i18n";
 import { taxonomyCellValue } from "./taxonomy-label";
 
 // 仅按列和完整原句匹配程序说明；未知诊断、科学名称和原始导出值保持原样。
@@ -32,6 +32,8 @@ const functionStudyLabels: Record<string, Record<string, string>> = {
 export function resultCellValue(column: string, row: Record<string, unknown>, language: Language): unknown {
   const value = taxonomyCellValue(column, row, language);
   const labels = functionStudyLabels[column];
+  if (language === "en" && column === "target" && typeof value === "string" && /^v[49]群落$/i.test(value)) return translateLabel(value, language);
+  if (language === "en" && column === "reason" && typeof value === "string") return translateUi(Object.hasOwn(functionStudyLabels.reason, value) ? functionStudyLabels.reason[value] : value, language);
   return language === "en" && typeof value === "string"
     && Object.hasOwn(functionStudyLabels, column) && Object.hasOwn(labels, value)
     ? labels[value]

@@ -288,7 +288,7 @@ function TraceDetailView({ trace }: { trace: TraceDetail }) {
 }
 
 function AnalysisOverview({ trace }: { trace: TraceDetail }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const toolSpans = trace.spans.filter((span) => (
     span.span_kind === "tool" || span.tool_name !== null
   ));
@@ -303,8 +303,8 @@ function AnalysisOverview({ trace }: { trace: TraceDetail }) {
   const understanding = recordText(responseTool, "summary")
     ?? recordText(understandingSpan?.output_data, "rationale")
     ?? recordText(understandingSpan?.output_data, "summary")
-    ?? "尚未完成问题理解";
-  const conclusion = recordText(trace.output_data, "answer") ?? "尚未生成结论";
+    ?? t("尚未完成问题理解");
+  const conclusion = recordText(trace.output_data, "answer") ?? t("尚未生成结论");
   const sources = [...new Set(
     [...trace.data_sources, ...toolSpans.flatMap((span) => span.data_sources)]
       .map((source) => source.filename)
@@ -315,11 +315,11 @@ function AnalysisOverview({ trace }: { trace: TraceDetail }) {
     .map((span, index) => ({
       id: span.id,
       round: index + 1,
-      tags: summarizeDataFilters(span.tool_name ?? span.name, { ...span.input_data, ...span.filters }),
+      tags: summarizeDataFilters(span.tool_name ?? span.name, { ...span.input_data, ...span.filters }, language),
     }));
   if (dataSteps.length === 0 && responseFilters) {
     dataSteps.push({ id: "response", round: 1,
-      tags: summarizeDataFilters(recordText(responseTool, "name") ?? "", responseFilters) });
+      tags: summarizeDataFilters(recordText(responseTool, "name") ?? "", responseFilters, language) });
   }
   const commonTags = (dataSteps[0]?.tags ?? []).filter((tag) => (
     ["版本", "类群", "标记"].includes(tag.label)
@@ -458,7 +458,7 @@ function TraceTreeBranch({
             type="button"
             className={`trace-branch-toggle${collapsed ? " collapsed" : ""}`}
             onClick={() => onToggle(span.id)}
-            aria-label={t("{0} {1}", [collapsed ? t("展开") : t("收起"), span.name])}
+            aria-label={t("{0} {1}", [collapsed ? t("展开") : t("收起"), t(span.name)])}
             title={collapsed ? t("展开子节点") : t("收起子节点")}
           >
             <ChevronDown size={14} />
@@ -536,7 +536,7 @@ function FactBlock({ label, value }: { label: string; value: string }) {
 }
 function KeyValues({ title, value }: { title: string; value: Record<string, unknown> }) {
   const { t } = useLanguage();
-  const entries = summarizeFilterEntries(Object.entries(value));
+  const entries = summarizeFilterEntries(Object.entries(value), t);
   if (entries.length === 0) return null;
   return <div className="span-key-values"><strong>{title}</strong><div>{entries.map((entry) => <code key={`${entry.key}-${entry.value}`}>{t(entry.label)}: {entry.value}</code>)}</div></div>;
 }
@@ -585,13 +585,13 @@ const filterLabels: Record<string, string> = {
   top_n: "Top N",
 };
 
-function summarizeFilterEntries(entries: Array<[string, unknown]>): SummaryFilter[] {
+function summarizeFilterEntries(entries: Array<[string, unknown]>, t: (text: string, values?: Array<string | number>) => string): SummaryFilter[] {
   const result: SummaryFilter[] = [];
   const seen = new Set<string>();
   const add = (key: string, value: unknown) => {
     if (technicalFilterKeys.has(key) || value === null || value === undefined || value === "") return;
     if (key === "offset") return;
-    const text = formatTraceValue(value);
+    const text = formatTraceValue(value, t);
     if (!text) return;
     const identity = `${key}:${text}`;
     if (seen.has(identity)) return;
@@ -609,19 +609,19 @@ function summarizeFilterEntries(entries: Array<[string, unknown]>): SummaryFilte
   return result;
 }
 
-function formatTraceValue(value: unknown): string {
+function formatTraceValue(value: unknown, t: (text: string, values?: Array<string | number>) => string): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) {
-    const items = value.map(formatTraceValue).filter(Boolean);
+    const items = value.map((item) => formatTraceValue(item, t)).filter(Boolean);
     if (items.length === 0) return "";
-    return items.length > 6 ? `${items.slice(0, 6).join("、")} 等 ${items.length} 项` : items.join("、");
+    return items.length > 6 ? `${items.slice(0, 6).join("、")} ${t("等 {0} 项", [items.length])}` : items.join("、");
   }
   if (isRecord(value)) {
     const values = Object.entries(value)
       .filter(([key]) => !technicalFilterKeys.has(key))
-      .map(([key, item]) => `${filterLabels[key] ?? key}：${formatTraceValue(item)}`)
-      .filter((item) => !item.endsWith("："));
+      .map(([key, item]) => `${t(filterLabels[key] ?? key)}: ${formatTraceValue(item, t)}`)
+      .filter((item) => !item.endsWith(": "));
     return values.length > 0 ? values.slice(0, 4).join("；") : "";
   }
   return "";

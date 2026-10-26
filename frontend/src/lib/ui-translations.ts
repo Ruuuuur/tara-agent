@@ -1,5 +1,15 @@
 // 仅翻译应用生成的界面标签；聊天正文、原始参数和数据值不进入此词典。
 export const english: Record<string, string> = {
+  "实验层": "Assay",
+  "数据版本": "Data version",
+  "实验": "Experiment",
+  "功能": "Function",
+  "数量上限": "Limit",
+  "标记基因": "Marker gene",
+  "起始位置": "Offset",
+  "等 {0} 项": "etc. ({0} items)",
+  "{0} 条": "{0} items",
+  "NMDS在{0}次迭代预算内未收敛": "NMDS did not converge within the budget of {0} iterations.",
   "模型返回了无效的分析决定": "The model could not produce a valid analysis plan. Please try again.",
   "模型服务暂时不可用，请稍后重试。": "The model service is temporarily unavailable. Please try again later.",
   "已选中回答片段，可以引用后追问。": "Selected answer text is ready to quote.",

@@ -1,0 +1,918 @@
+[
+  {
+    "kind": "detail",
+    "text": "MATOU 数据已变化或不可用，请验证并重启服务"
+  },
+  {
+    "kind": "detail",
+    "text": "MATOU 未启用或清单版本不匹配，拒绝执行"
+  },
+  {
+    "kind": "detail",
+    "text": "MATOU 清单已变化，请验证并重启服务"
+  },
+  {
+    "kind": "detail",
+    "text": "代码或数据版本不匹配，拒绝执行"
+  },
+  {
+    "kind": "detail",
+    "text": "会话不存在。"
+  },
+  {
+    "kind": "detail",
+    "text": "处理后数据不可用"
+  },
+  {
+    "kind": "detail",
+    "text": "指定的会话不存在或已经归档。"
+  },
+  {
+    "kind": "detail",
+    "text": "数据库持久化服务不可用。"
+  },
+  {
+    "kind": "detail",
+    "text": "数据库暂时不可用。"
+  },
+  {
+    "kind": "detail",
+    "text": "数据服务认证失败"
+  },
+  {
+    "kind": "detail",
+    "text": "数据版本已变化，请重启数据服务"
+  },
+  {
+    "kind": "detail",
+    "text": "本次包含多项查询，将逐项执行并核对完整目标。"
+  },
+  {
+    "kind": "detail",
+    "text": "根据工具结果生成回答、警告、来源和图表数据。"
+  },
+  {
+    "kind": "detail",
+    "text": "游客登录未开放。"
+  },
+  {
+    "kind": "detail",
+    "text": "游客账户配置冲突。"
+  },
+  {
+    "kind": "detail",
+    "text": "研究资料包变化，请重启服务"
+  },
+  {
+    "kind": "detail",
+    "text": "研究资料变化，请重启服务"
+  },
+  {
+    "kind": "detail",
+    "text": "研究资料版本不匹配"
+  },
+  {
+    "kind": "detail",
+    "text": "示例问题暂时不可用，请检查处理后数据。"
+  },
+  {
+    "kind": "detail",
+    "text": "认证服务不可用。"
+  },
+  {
+    "kind": "detail",
+    "text": "该邮箱已经注册。"
+  },
+  {
+    "kind": "detail",
+    "text": "请先登录。"
+  },
+  {
+    "kind": "detail",
+    "text": "请求来源不受信任。"
+  },
+  {
+    "kind": "detail",
+    "text": "邮箱或密码不正确。"
+  },
+  {
+    "kind": "detail",
+    "text": "链路记录不存在。"
+  },
+  {
+    "kind": "error",
+    "text": "Agent 在返回完整响应前结束"
+  },
+  {
+    "kind": "error",
+    "text": "Agent 执行结束但未返回完整响应"
+  },
+  {
+    "kind": "error",
+    "text": "Bray–Curtis距离无秩变化，NMDS未定义"
+  },
+  {
+    "kind": "error",
+    "text": "LHC亚家族预计算与当前MATOU版本不一致"
+  },
+  {
+    "kind": "error",
+    "text": "LHC信号求和溢出"
+  },
+  {
+    "kind": "error",
+    "text": "LHC预计算只适用于硅藻数据"
+  },
+  {
+    "kind": "error",
+    "text": "LHC预计算超过12小时保护上限"
+  },
+  {
+    "kind": "error",
+    "text": "LHC预计算输入包含缺失、负值或非有限信号"
+  },
+  {
+    "kind": "error",
+    "text": "MATOU 功能谱缓存版本已变化，请验证后重启本地后端"
+  },
+  {
+    "kind": "error",
+    "text": "MATOU 清单已变化"
+  },
+  {
+    "kind": "error",
+    "text": "MATOU 清单版本已变化，请验证后重启本地后端"
+  },
+  {
+    "kind": "error",
+    "text": "NMDS不接受负值、缺失或全零分布"
+  },
+  {
+    "kind": "error",
+    "text": "NMDS无可用解"
+  },
+  {
+    "kind": "error",
+    "text": "NMDS超过500组资源保护上限，请明确缩小样本范围"
+  },
+  {
+    "kind": "error",
+    "text": "NMDS需要至少4组有限观测"
+  },
+  {
+    "kind": "error",
+    "text": "Pfam参考名称有缺失或重复"
+  },
+  {
+    "kind": "error",
+    "text": "TARA_DATA_SERVICE_TOKEN 必须至少包含 32 个字符"
+  },
+  {
+    "kind": "error",
+    "text": "geneID 必须为正整数"
+  },
+  {
+    "kind": "error",
+    "text": "一个MATOU实验样本不能指向多个PANGAEA样本"
+  },
+  {
+    "kind": "error",
+    "text": "不支持的实验类型"
+  },
+  {
+    "kind": "error",
+    "text": "产物大小与清单不符"
+  },
+  {
+    "kind": "error",
+    "text": "产物行数、类型或空值不符合契约"
+  },
+  {
+    "kind": "error",
+    "text": "会话名称不能为空"
+  },
+  {
+    "kind": "error",
+    "text": "作者LHC注释存在重复基因编号"
+  },
+  {
+    "kind": "error",
+    "text": "作者Pfam汇总表不含全部硅藻基因分母；参考重算须明确normalization=author_script，不能冒充论文图注总量口径"
+  },
+  {
+    "kind": "error",
+    "text": "作者环境或经纬度映射存在重复键"
+  },
+  {
+    "kind": "error",
+    "text": "作者环境表缺少请求变量"
+  },
+  {
+    "kind": "error",
+    "text": "信号求和溢出，不能发布有限结果"
+  },
+  {
+    "kind": "error",
+    "text": "功能信号求和溢出"
+  },
+  {
+    "kind": "error",
+    "text": "功能分析参考资料版本不匹配"
+  },
+  {
+    "kind": "error",
+    "text": "功能分组求和溢出或存在非法信号"
+  },
+  {
+    "kind": "error",
+    "text": "功能家族信号求和溢出"
+  },
+  {
+    "kind": "error",
+    "text": "功能家族信号超过类群分母"
+  },
+  {
+    "kind": "error",
+    "text": "功能汇总表存在重复键或非法值"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱或序列产物摘要不符合清单"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱或序列产物行数不符合清单"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱缓存与当前数据或采样编码规则不一致，请重新准备"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱缓存列或类型不符合契约"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱缓存存在重复键"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱缓存存在非法数值"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱缓存有未定义输入值"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱缓存清单已变化，请重新创建读取器"
+  },
+  {
+    "kind": "error",
+    "text": "功能谱缓存缺少请求样本"
+  },
+  {
+    "kind": "error",
+    "text": "同一采样编码存在重复实验，不能推断合并或配对"
+  },
+  {
+    "kind": "error",
+    "text": "存在未知样本编号"
+  },
+  {
+    "kind": "error",
+    "text": "定量输入包含其他样本，不能混合计算"
+  },
+  {
+    "kind": "error",
+    "text": "定量输入有重复基因，不自动合并"
+  },
+  {
+    "kind": "error",
+    "text": "序列查询须指定 geneID 或 Pfam"
+  },
+  {
+    "kind": "error",
+    "text": "序列返回超过 200000 个碱基，请缩小查询范围"
+  },
+  {
+    "kind": "error",
+    "text": "数据服务协议不支持或服务未就绪"
+  },
+  {
+    "kind": "error",
+    "text": "数据服务状态契约不匹配"
+  },
+  {
+    "kind": "error",
+    "text": "数据生成版本已变化，请验证后重启本地后端"
+  },
+  {
+    "kind": "error",
+    "text": "无法访问数据服务，请检查 SSH 隧道和服务状态"
+  },
+  {
+    "kind": "error",
+    "text": "映射含未知MATOU实验或样本"
+  },
+  {
+    "kind": "error",
+    "text": "映射含未知PANGAEA编号"
+  },
+  {
+    "kind": "error",
+    "text": "映射字段不能空白或有首尾空格"
+  },
+  {
+    "kind": "error",
+    "text": "映射的 Pfam 编号格式无效"
+  },
+  {
+    "kind": "error",
+    "text": "映射须有且仅有assay、sample_name、sample_id_pangaea、evidence四列且非空"
+  },
+  {
+    "kind": "error",
+    "text": "昵称不能为空"
+  },
+  {
+    "kind": "error",
+    "text": "未准备核酸序列；先执行 prepare-study 并指定官方 FASTA 和目标 Pfam"
+  },
+  {
+    "kind": "error",
+    "text": "未准备论文功能参考资料；运行 deploy/prepare_function_reference.py"
+  },
+  {
+    "kind": "error",
+    "text": "未知实验类型或样本；不自动转换编号"
+  },
+  {
+    "kind": "error",
+    "text": "未配置当前MATOU功能数据"
+  },
+  {
+    "kind": "error",
+    "text": "未配置数据服务地址"
+  },
+  {
+    "kind": "error",
+    "text": "本地与服务器分析代码或计算依赖不一致，请同步数据服务版本"
+  },
+  {
+    "kind": "error",
+    "text": "本次请求包含多项分析，请分别提交查询。"
+  },
+  {
+    "kind": "error",
+    "text": "样本环境值必须为有限数值或缺失"
+  },
+  {
+    "kind": "error",
+    "text": "样本环境补充缺少value列"
+  },
+  {
+    "kind": "error",
+    "text": "样本环境补充表列不完整或为空"
+  },
+  {
+    "kind": "error",
+    "text": "样本环境补充表存在重复样本变量"
+  },
+  {
+    "kind": "error",
+    "text": "样本环境补充需要v2资料包和明确来源版本"
+  },
+  {
+    "kind": "error",
+    "text": "样本环境补充需要来源和版本"
+  },
+  {
+    "kind": "error",
+    "text": "样本范围为空、超过 2000 个或包含未知原始编号"
+  },
+  {
+    "kind": "error",
+    "text": "样本范围为空或含未知原始编号"
+  },
+  {
+    "kind": "error",
+    "text": "核酸序列产物的类型、空值或唯一键不符合契约"
+  },
+  {
+    "kind": "error",
+    "text": "模型未提供多步骤规划接口"
+  },
+  {
+    "kind": "error",
+    "text": "模型未返回有效的分析工具，请重新提问。"
+  },
+  {
+    "kind": "error",
+    "text": "没有可比较的无歧义采样编码或超过资源上限"
+  },
+  {
+    "kind": "error",
+    "text": "清单已变化，请重新创建读取器"
+  },
+  {
+    "kind": "error",
+    "text": "环境值必须有限或为空"
+  },
+  {
+    "kind": "error",
+    "text": "环境变量不在所选来源白名单中"
+  },
+  {
+    "kind": "error",
+    "text": "环境表存在空键或重复站位水层"
+  },
+  {
+    "kind": "error",
+    "text": "环境表必须记录来源和变量单位"
+  },
+  {
+    "kind": "error",
+    "text": "环境表需要station、depth列"
+  },
+  {
+    "kind": "error",
+    "text": "研究产物大小与清单不符"
+  },
+  {
+    "kind": "error",
+    "text": "研究清单内容已变化，请重新创建读取器"
+  },
+  {
+    "kind": "error",
+    "text": "研究环境表结构或唯一键无效"
+  },
+  {
+    "kind": "error",
+    "text": "研究环境表缺少单位声明"
+  },
+  {
+    "kind": "error",
+    "text": "研究资料与核心数据版本不匹配，请重新准备"
+  },
+  {
+    "kind": "error",
+    "text": "研究资料产物与来源不完整"
+  },
+  {
+    "kind": "error",
+    "text": "研究资料包出现或消失，请重启数据服务"
+  },
+  {
+    "kind": "error",
+    "text": "研究资料版本已变化，请重启本地后端"
+  },
+  {
+    "kind": "error",
+    "text": "研究资料输出不能包含原始输入"
+  },
+  {
+    "kind": "error",
+    "text": "站位格式无效"
+  },
+  {
+    "kind": "error",
+    "text": "结果超过 100000 行，请缩小样本或家族范围"
+  },
+  {
+    "kind": "error",
+    "text": "至少提供环境表或经核验的样本映射"
+  },
+  {
+    "kind": "error",
+    "text": "至少需要修改一项会话信息"
+  },
+  {
+    "kind": "error",
+    "text": "论文任务二仅适用于已准备的Bacillariophyta范围"
+  },
+  {
+    "kind": "error",
+    "text": "论文功能参考资料已变化，请重新创建读取器"
+  },
+  {
+    "kind": "error",
+    "text": "论文功能参考资料版本已变化，请重启本地后端"
+  },
+  {
+    "kind": "error",
+    "text": "请求类群不在当前功能数据范围内"
+  },
+  {
+    "kind": "error",
+    "text": "读取期间产物发生变化"
+  },
+  {
+    "kind": "error",
+    "text": "读取期间清单发生变化"
+  },
+  {
+    "kind": "error",
+    "text": "读数阈值仅适用于全部 ASV 的多样性分析；指定分类单元时不能将目标读数当作测序深度"
+  },
+  {
+    "kind": "error",
+    "text": "跨库映射与MATOU版本不匹配，请重新核验"
+  },
+  {
+    "kind": "error",
+    "text": "跨库映射结构或唯一键无效"
+  },
+  {
+    "kind": "error",
+    "text": "跨库映射缺少数据版本或证据版本"
+  },
+  {
+    "kind": "error",
+    "text": "跨库映射需要证据来源、版本和MATOU目录"
+  },
+  {
+    "kind": "error",
+    "text": "跨样本查询需要匹配条件的功能谱缓存；先执行 prepare-study，避免聊天重复扫描全部基因"
+  },
+  {
+    "kind": "error",
+    "text": "输入列、类型或空值不符合候选功能计算契约"
+  },
+  {
+    "kind": "error",
+    "text": "远程分析未返回结构化结果"
+  },
+  {
+    "kind": "error",
+    "text": "远程分析返回的结果或执行树无效"
+  },
+  {
+    "kind": "error",
+    "text": "远程工具契约不匹配"
+  },
+  {
+    "kind": "error",
+    "text": "远程数据服务尚未启用 MATOU 功能数据"
+  },
+  {
+    "kind": "error",
+    "text": "远程问题建议契约不匹配"
+  },
+  {
+    "kind": "error",
+    "text": "采样编码没有无歧义的 MetaG/MetaT 对应样本"
+  },
+  {
+    "kind": "error",
+    "text": "需要已去重的 gene–Pfam 映射，不能直接使用 domain hits"
+  },
+  {
+    "kind": "reason",
+    "text": "PLS迭代100次未收敛"
+  },
+  {
+    "kind": "reason",
+    "text": "单步规划返回多个工具"
+  },
+  {
+    "kind": "reason",
+    "text": "响应残差信号不足，成分未定义"
+  },
+  {
+    "kind": "reason",
+    "text": "响应载荷未定义"
+  },
+  {
+    "kind": "reason",
+    "text": "四粒径不完整，未补零"
+  },
+  {
+    "kind": "reason",
+    "text": "四粒径分布全零，Bray–Curtis未定义"
+  },
+  {
+    "kind": "reason",
+    "text": "存在常量变量，标准化未定义"
+  },
+  {
+    "kind": "reason",
+    "text": "完整环境观测不足4组"
+  },
+  {
+    "kind": "reason",
+    "text": "完整观测不足4组，无法稳定提取两个成分"
+  },
+  {
+    "kind": "reason",
+    "text": "常量变量的相关性未定义"
+  },
+  {
+    "kind": "reason",
+    "text": "成分方差未定义"
+  },
+  {
+    "kind": "reason",
+    "text": "成对完整观测不足3组"
+  },
+  {
+    "kind": "reason",
+    "text": "所选范围无可用跨库映射"
+  },
+  {
+    "kind": "reason",
+    "text": "无法解析作者采样编码"
+  },
+  {
+    "kind": "reason",
+    "text": "无经核验跨库映射"
+  },
+  {
+    "kind": "reason",
+    "text": "未准备研究资料：environment"
+  },
+  {
+    "kind": "reason",
+    "text": "未准备研究资料：sample_environment"
+  },
+  {
+    "kind": "reason",
+    "text": "未准备研究资料：sample_mapping"
+  },
+  {
+    "kind": "reason",
+    "text": "标记不可用或水层/粒径不在范围"
+  },
+  {
+    "kind": "reason",
+    "text": "水层或实验协议不在当前方法范围"
+  },
+  {
+    "kind": "reason",
+    "text": "环境与响应无可提取协变信号"
+  },
+  {
+    "kind": "reason",
+    "text": "环境常量或排序矩阵秩不足"
+  },
+  {
+    "kind": "reason",
+    "text": "环境矩阵秩不足2"
+  },
+  {
+    "kind": "reason",
+    "text": "相关坐标存在未定义值"
+  },
+  {
+    "kind": "reason",
+    "text": "筛选范围内无样本"
+  },
+  {
+    "kind": "reason",
+    "text": "需要以作者逐geneID亚家族注释与当前MetaG/MetaT基因信号预计算的lhc_profiles；PF00504总量不能代替LHCf/LHCq/LHCr/LHCx/LHCz。作者公开Pfam汇总表不能还原亚家族。"
+  },
+  {
+    "kind": "title",
+    "text": "候选 Pfam 信号份额（功能可共享基因）"
+  },
+  {
+    "kind": "title",
+    "text": "候选 Pfam 总体已观测贡献排名"
+  },
+  {
+    "kind": "title",
+    "text": "分析 Tara 环境关联"
+  },
+  {
+    "kind": "title",
+    "text": "分析跨样本功能谱与总体 Top Pfam"
+  },
+  {
+    "kind": "title",
+    "text": "分类群测序 reads 排名"
+  },
+  {
+    "kind": "title",
+    "text": "切换多步骤分析"
+  },
+  {
+    "kind": "title",
+    "text": "执行科学分析"
+  },
+  {
+    "kind": "title",
+    "text": "本次返回样本的分类群相对丰度"
+  },
+  {
+    "kind": "title",
+    "text": "查询 MATOU 候选基因核酸序列"
+  },
+  {
+    "kind": "title",
+    "text": "查询 Tara 分类单元"
+  },
+  {
+    "kind": "title",
+    "text": "查询 Tara 样本"
+  },
+  {
+    "kind": "title",
+    "text": "查询候选功能分析样本"
+  },
+  {
+    "kind": "title",
+    "text": "样本 Shannon 多样性"
+  },
+  {
+    "kind": "title",
+    "text": "样本分布"
+  },
+  {
+    "kind": "title",
+    "text": "检查未通过，重新规划"
+  },
+  {
+    "kind": "title",
+    "text": "比较目标功能的 MetaG 与 MetaT 相对信号"
+  },
+  {
+    "kind": "title",
+    "text": "理解问题并选择工具"
+  },
+  {
+    "kind": "title",
+    "text": "目标功能与环境关联"
+  },
+  {
+    "kind": "title",
+    "text": "硅藻功能谱、粒径海区分布与环境PLS分析"
+  },
+  {
+    "kind": "title",
+    "text": "组织可追踪答案"
+  },
+  {
+    "kind": "title",
+    "text": "群落分布、多样性及环境关系"
+  },
+  {
+    "kind": "title",
+    "text": "获取 Tara 样本信息"
+  },
+  {
+    "kind": "title",
+    "text": "计算 Tara Alpha 多样性"
+  },
+  {
+    "kind": "title",
+    "text": "计算分类单元丰度"
+  },
+  {
+    "kind": "title",
+    "text": "计算单样本候选功能谱"
+  },
+  {
+    "kind": "title",
+    "text": "识别请求类型"
+  },
+  {
+    "kind": "title",
+    "text": "读取全部真核生物读数分母"
+  },
+  {
+    "kind": "title",
+    "text": "读取分类单元样本读数"
+  },
+  {
+    "kind": "title",
+    "text": "读取匹配的分类单元"
+  },
+  {
+    "kind": "title",
+    "text": "读取匹配的分类单元标识"
+  },
+  {
+    "kind": "title",
+    "text": "读取多样性分析丰度矩阵"
+  },
+  {
+    "kind": "title",
+    "text": "读取多样性分析分类单元"
+  },
+  {
+    "kind": "title",
+    "text": "读取指定样本背景数据"
+  },
+  {
+    "kind": "title",
+    "text": "读取标记分类与丰度数据"
+  },
+  {
+    "kind": "title",
+    "text": "读取样本丰度矩阵"
+  },
+  {
+    "kind": "title",
+    "text": "读取样本内类群组成"
+  },
+  {
+    "kind": "title",
+    "text": "读取样本背景数据"
+  },
+  {
+    "kind": "title",
+    "text": "读取目标群落原始样本矩阵"
+  },
+  {
+    "kind": "title",
+    "text": "读取示例问题背景"
+  },
+  {
+    "kind": "title",
+    "text": "读取背景样本标识"
+  },
+  {
+    "kind": "title",
+    "text": "选择分析工作流"
+  },
+  {
+    "kind": "title",
+    "text": "选择示例问题分类群"
+  },
+  {
+    "kind": "x_label",
+    "text": "MetaG 样本内份额"
+  },
+  {
+    "kind": "x_label",
+    "text": "保留功能总相对信号中的比例"
+  },
+  {
+    "kind": "x_label",
+    "text": "全部硅藻基因信号中的平均比例"
+  },
+  {
+    "kind": "x_label",
+    "text": "响应"
+  },
+  {
+    "kind": "x_label",
+    "text": "已映射信号内分配比例"
+  },
+  {
+    "kind": "x_label",
+    "text": "成分1相关"
+  },
+  {
+    "kind": "x_label",
+    "text": "站点"
+  },
+  {
+    "kind": "x_label",
+    "text": "纬度（°）"
+  },
+  {
+    "kind": "x_label",
+    "text": "经度"
+  },
+  {
+    "kind": "y_label",
+    "text": "MetaT 样本内份额"
+  },
+  {
+    "kind": "y_label",
+    "text": "功能（按排名排序）"
+  },
+  {
+    "kind": "y_label",
+    "text": "功能（按排名）"
+  },
+  {
+    "kind": "y_label",
+    "text": "原始样本等权平均已观测贡献"
+  },
+  {
+    "kind": "y_label",
+    "text": "已提供目标功能数值和"
+  },
+  {
+    "kind": "y_label",
+    "text": "已提供类群记录内份额"
+  },
+  {
+    "kind": "y_label",
+    "text": "成分2相关"
+  },
+  {
+    "kind": "y_label",
+    "text": "环境变量"
+  },
+  {
+    "kind": "y_label",
+    "text": "目标功能样本内相对信号"
+  },
+  {
+    "kind": "y_label",
+    "text": "纬度"
+  }
+]

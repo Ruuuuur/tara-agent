@@ -1,7 +1,11 @@
+import { translateUi, type Language } from "./i18n";
+
 export type DataTag = { label: string; value: string; detail?: string };
 
 // 标签仅概括已有条件；长名单保留完整提示，未记录的范围不推断为全量。
-export function summarizeDataFilters(name: string, filters: Record<string, unknown>): DataTag[] {
+export function summarizeDataFilters(name: string, filters: Record<string, unknown>, language: Language = "zh"): DataTag[] {
+  const t = (text: string, values: Array<string | number> = []) => translateUi(text, language, values);
+  const separator = language === "en" ? ", " : "、";
   const record = (value: unknown): Record<string, unknown> => (
     value !== null && typeof value === "object" && !Array.isArray(value)
       ? value as Record<string, unknown> : {}
@@ -16,9 +20,9 @@ export function summarizeDataFilters(name: string, filters: Record<string, unkno
   };
   add("版本", query.dataset_version);
   const taxon = query.taxon ?? selection.taxon;
-  add("类群", taxon === "Bacillariophyta" ? "硅藻" : taxon);
+  add("类群", taxon === "Bacillariophyta" ? t("硅藻") : taxon);
   if (taxon === "Bacillariophyta") tags[tags.length - 1].detail = "Bacillariophyta";
-  add("信号层", query.assay === "MetaG" ? "MetaG（DNA）" : query.assay === "MetaT" ? "MetaT（RNA）" : query.assay);
+  add("信号层", query.assay === "MetaG" ? t("MetaG（DNA）") : query.assay === "MetaT" ? t("MetaT（RNA）") : query.assay);
   if (name === "compare_function_signals") add("比较", "MetaG ↔ MetaT");
   add("标记", query.marker);
   for (const [key, label] of [
@@ -33,20 +37,20 @@ export function summarizeDataFilters(name: string, filters: Record<string, unkno
     const value = query[key];
     if (Array.isArray(value) && value.length) {
       const items = value.map(String);
-      tags.push({ label, value: items.length > 2 ? `${items.slice(0, 2).join("、")} 等 ${items.length} 项` : items.join("、"), detail: items.join("、") });
+      tags.push({ label, value: items.length > 2 ? `${items.slice(0, 2).join(separator)} ${t("等 {0} 项", [items.length])}` : items.join(separator), detail: items.join(separator) });
     }
   }
-  if (name === "function_atlas" && query.sample_names === null) add("范围", "全部可用样本");
-  if (name === "compare_function_signals" && query.sampling_keys === null) add("范围", "全部合格采样编码");
+  if (name === "function_atlas" && query.sample_names === null) add("范围", t("全部可用样本"));
+  if (name === "compare_function_signals" && query.sampling_keys === null) add("范围", t("全部合格采样编码"));
   if (["function_atlas", "function_profile"].includes(name) && typeof query.top_n === "number") add("排名", `Top ${query.top_n} Pfam`);
   if (typeof query.max_i_evalue === "number") add("注释筛选", `i-Evalue ≤ ${query.max_i_evalue}`);
   if (typeof query.temperature_min === "number") add("温度", `≥ ${query.temperature_min} °C`);
   if (typeof query.temperature_max === "number") add("温度", `≤ ${query.temperature_max} °C`);
-  if (typeof query.polar === "boolean") add("区域", query.polar ? "极地" : "非极地");
+  if (typeof query.polar === "boolean") add("区域", query.polar ? t("极地") : t("非极地"));
   const groups: Record<string, string> = { station: "站位", polar: "极地/非极地", ocean_region: "海区", depth: "水层", size_fraction: "粒径组" };
-  if (typeof query.group_by === "string") add("分组", groups[query.group_by] ?? query.group_by);
+  if (typeof query.group_by === "string") add("分组", groups[query.group_by] ? t(groups[query.group_by]) : query.group_by);
   for (const [key, label] of [["limit", "本页上限"], ["asv_limit", "分类单元上限"], ["sample_limit", "样本上限"], ["point_limit", "数据点上限"]]) {
-    if (typeof query[key] === "number") add(label, `${query[key]} 条`);
+    if (typeof query[key] === "number") add(label, t("{0} 条", [query[key] as number]));
   }
   return tags;
 }

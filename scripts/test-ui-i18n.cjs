@@ -5,7 +5,8 @@ const path=require('node:path');
 const {cases:fixtures}=require('./ui-i18n-fixtures.cjs');
 const contentLanguage=process.env.TARA_AUDIT_CONTENT_LANGUAGE||'en';
 if(!['en','zh'].includes(contentLanguage))throw new Error('TARA_AUDIT_CONTENT_LANGUAGE must be en or zh');
-const cases=contentLanguage==='en'?fixtures:fixtures.map(item=>({...item,answer:'这些样本的分析结果已保留。可通过“选择更多结果”查看。',reasoning:'根据可用数据执行分析。'}));
+const selectedFixtures=process.env.TARA_AUDIT_RESPONSES?JSON.parse(fs.readFileSync(process.env.TARA_AUDIT_RESPONSES,'utf8')):fixtures;
+const cases=contentLanguage==='en'?selectedFixtures:selectedFixtures.map(item=>({...item,answer:'这些样本的分析结果已保留。可通过“选择更多结果”查看。',reasoning:'根据可用数据执行分析。'}));
 const rounds=Number(process.env.TARA_AUDIT_ROUNDS||3), output=process.env.TARA_AUDIT_OUTPUT||'/tmp/tara-i18n-audit/report.json';
 if(!Number.isInteger(rounds)||rounds<1)throw new Error('TARA_AUDIT_ROUNDS must be a positive integer');
 fs.mkdirSync(path.dirname(output),{recursive:true});
@@ -16,7 +17,7 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
  const found=[];
  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
  for(let node;node=walker.nextNode();){const el=node.parentElement; if(!el||el.closest('script,style,pre,code,.language-toggle,.modebar')||!el.getClientRects().length||getComputedStyle(el).visibility==='hidden')continue; const text=node.textContent.trim();if(/[\u3400-\u9fff]/.test(text))found.push({text,element:el.tagName,class:el.className});}
- for(const el of document.querySelectorAll('button[aria-label],input[aria-label],textarea[aria-label]')){if(el.closest('.language-toggle')||!el.getClientRects().length)continue;const text=el.getAttribute('aria-label');if(/[\u3400-\u9fff]/.test(text))found.push({text,element:el.tagName,attribute:'aria-label'});}
+ for(const el of document.querySelectorAll('[aria-label],[title]')){if(el.closest('pre,code,.language-toggle,.modebar')||!el.getClientRects().length)continue;for(const attribute of ['aria-label','title']){const text=el.getAttribute(attribute);if(text&&/[\u3400-\u9fff]/.test(text))found.push({text,element:el.tagName,attribute});}}
  for(const el of document.querySelectorAll('.js-plotly-plot')){ for(const trace of el.data||[])for(const text of [trace.name,...(Array.isArray(trace.text)?trace.text:[]),...(Array.isArray(trace.customdata)?trace.customdata:[])])if(typeof text==='string'&&/[\u3400-\u9fff]/.test(text))found.push({text,element:'Plotly hover or legend'}); const l=el._fullLayout;if(!l)continue;for(const text of [l.title?.text,l.xaxis?.title?.text,l.yaxis?.title?.text])if(text&&/[\u3400-\u9fff]/.test(text))found.push({text,element:'Plotly layout'});}
  return found;
 });
@@ -122,6 +123,15 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
     if(['pagination','taxonomy'].includes(item.id)&&content.split('\n').length!==106)throw Error('CSV must contain all 105 samples');
     csvChecked=true;
    }
+   let pngChecked=false;
+   if(round===1&&width===1440&&item.id==='function-study'){
+    const chart=page.locator('.chart-panel').filter({hasText:contentLanguage==='en'?'LHC subfamilies environmental PLS':'LHC亚家族 环境PLS'}).first();
+    const [download]=await Promise.all([page.waitForEvent('download'),chart.locator('.artifact-download').filter({hasText:'Download PNG'}).click()]);
+    if(contentLanguage==='en'&&/[\u3400-\u9fff]/.test(download.suggestedFilename()))throw new Error('Chinese PNG filename');
+    const bytes=fs.readFileSync(await download.path());
+    if(bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('Invalid PNG download');
+    fs.copyFileSync(await download.path(),path.join(path.dirname(output),'lhc-'+contentLanguage+'.png'));pngChecked=true;
+   }
    let historyChecked=false;
    if(width===1440){
     await page.reload({waitUntil:'networkidle'});
@@ -143,7 +153,7 @@ const scan=async page=>contentLanguage==='zh'?[]:page.evaluate(()=>{
     historyChecked=true;
    }
    const unique=[...new Map(findings.map(f=>[f.text+f.attribute, f])).values()];
-   const entry={round,width,case:item.id,findings:unique,errors,csvChecked,historyChecked,answerInvariantChecked:true,resultContentInvariantChecked:true};report.checks.push(entry);
+   const entry={round,width,case:item.id,findings:unique,errors,csvChecked,pngChecked,historyChecked,answerInvariantChecked:true,resultContentInvariantChecked:true};report.checks.push(entry);
    if(unique.length||errors.length){report.failures.push(entry);await page.screenshot({path:path.join(path.dirname(output),`fail-${round}-${width}-${item.id}.png`),fullPage:true});}
    console.log(JSON.stringify({round,width,case:item.id,findings:unique.length,errors:errors.length}));
   }catch(error){report.failures.push({round,width,case:item.id,error:error.message});console.log(JSON.stringify({round,width,case:item.id,error:error.message}));}

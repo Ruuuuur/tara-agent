@@ -1,3 +1,4 @@
+import { backendDisplayEnglish } from "./backend-display-translations";
 import { english } from "./ui-translations";
 
 export type Language = "zh" | "en";
@@ -16,8 +17,16 @@ const numericMessages = Object.entries(english)
     target,
   }));
 
+function exactTranslation(text: string): string | undefined {
+  if (Object.hasOwn(english, text)) return english[text];
+  if (Object.hasOwn(backendDisplayEnglish, text)) return backendDisplayEnglish[text];
+}
+
 function translateMessage(text: string): string {
-  if (english[text]) return english[text];
+  const exact = exactTranslation(text);
+  if (exact !== undefined) return exact;
+  const toolCall = /^调用 MCP 工具 ([a-z][a-z0-9_]*)$/.exec(text);
+  if (toolCall) return `Call MCP tool ${toolCall[1]}`;
   // 只识别词典内的完整数值模板，避免改写未知错误中的科学内容和标识。
   for (const { pattern, target } of numericMessages) {
     const match = pattern.exec(text);
@@ -35,17 +44,20 @@ export function translateLabel(text: string, language: Language): string {
   // 仅供应用组合的标题和摘要使用；未知错误、正文和数据值不做片段替换。
   if (language === "zh") return text;
   // 先翻译完整标题，再递归处理应用生成的步骤、角色与表格后缀，避免片段混译和粘连。
-  if (english[text]) return english[text];
+  const exact = exactTranslation(text);
+  if (exact !== undefined) return exact;
   const artifactStep = /^步骤 (\d+) · ([\s\S]+)$/.exec(text);
   if (artifactStep) return `Step ${artifactStep[1]} · ${translateLabel(artifactStep[2], language)}`;
   const artifactRole = /^(【中间步骤结果】|【最终结果】)([\s\S]+)$/.exec(text);
   if (artifactRole) return `${english[artifactRole[1]].trimEnd()} ${translateLabel(artifactRole[2], language)}`;
-  if (text.endsWith("表") && english[text.slice(0, -1)]) {
+  if (text.endsWith("表") && Object.hasOwn(english, text.slice(0, -1))) {
     const title = english[text.slice(0, -1)];
     return /\btable$/i.test(title) ? title : `${title} table`;
   }
   const parts = text.split(" · ");
   if (parts.length > 1) return parts.map((part) => translateLabel(part, language)).join(" · ");
+  const communityTarget = /^(v[49])群落$/i.exec(text);
+  if (communityTarget) return `${communityTarget[1].toUpperCase()} community`;
   const latitude = /^(.+)随纬度变化$/.exec(text);
   if (latitude) return `${translateLabel(latitude[1], language)} vs latitude`;
   const surface = /^(.+ μm)表层群落相对丰度$/.exec(text);
@@ -70,5 +82,5 @@ export function translateLabel(text: string, language: Language): string {
   if (planningStep) return `Plan analysis step ${planningStep[1]}`;
   const completedStep = /^完成分析步骤 (\d+)$/.exec(text);
   if (completedStep) return `Analysis step ${completedStep[1]} completed`;
-  return english[text] ?? text.replace(phrasePattern, (phrase) => english[phrase]);
+  return text.replace(phrasePattern, (phrase) => english[phrase]);
 }

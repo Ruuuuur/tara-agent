@@ -37,3 +37,12 @@ test("unknown diagnostics, scientific labels and numbers retain their original v
   const row = {taxon_label: "未鉴定到属（Root;Eukaryota）", classification_status: "unresolved"};
   assert.equal(resultCellValue("taxon_label", row, "en"), "Unresolved genus (Root;Eukaryota)");
 });
+
+test("community PLS targets and iteration-limit reasons use complete templates", () => {
+  for (const marker of ["v4", "v9"]) {
+    assert.equal(resultCellValue("target", {target: marker + "群落"}, "en"), marker.toUpperCase() + " community");
+  }
+  const reason = "NMDS在250次迭代预算内未收敛";
+  assert.equal(resultCellValue("reason", {reason}, "en"), "NMDS did not converge within the budget of 250 iterations.");
+  assert.equal(resultCellValue("reason", {reason}, "zh"), reason);
+});
