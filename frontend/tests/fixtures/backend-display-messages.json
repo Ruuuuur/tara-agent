@@ -173,7 +173,19 @@
   },
   {
     "kind": "error",
+    "text": "reads 产物不完整或已变化"
+  },
+  {
+    "kind": "error",
+    "text": "reads任务无法核验或计算，请检查离线任务产物与MATOU版本"
+  },
+  {
+    "kind": "error",
     "text": "一个MATOU实验样本不能指向多个PANGAEA样本"
+  },
+  {
+    "kind": "error",
+    "text": "不支持的 reads 结果版本"
   },
   {
     "kind": "error",
@@ -281,6 +293,10 @@
   },
   {
     "kind": "error",
+    "text": "定量数据为空、重复、缺失或包含无效数值"
+  },
+  {
+    "kind": "error",
     "text": "定量输入包含其他样本，不能混合计算"
   },
   {
@@ -342,6 +358,10 @@
   {
     "kind": "error",
     "text": "未准备论文功能参考资料；运行 deploy/prepare_function_reference.py"
+  },
+  {
+    "kind": "error",
+    "text": "未得到正信号功能，不能比较排名"
   },
   {
     "kind": "error",
@@ -410,6 +430,10 @@
   {
     "kind": "error",
     "text": "没有可比较的无歧义采样编码或超过资源上限"
+  },
+  {
+    "kind": "error",
+    "text": "没有可用的类群总信号，不能计算功能份额"
   },
   {
     "kind": "error",
@@ -562,6 +586,26 @@
   {
     "kind": "error",
     "text": "采样编码没有无歧义的 MetaG/MetaT 对应样本"
+  },
+  {
+    "kind": "error",
+    "text": "重算任务不存在；请先查询可用任务"
+  },
+  {
+    "kind": "error",
+    "text": "重算基因谱格式不匹配"
+  },
+  {
+    "kind": "error",
+    "text": "重算未包含清单中的全部技术 runs"
+  },
+  {
+    "kind": "error",
+    "text": "重算绑定的 MATOU 基线已变化，需重新生成"
+  },
+  {
+    "kind": "error",
+    "text": "重算输入包含其他文库，不能混合比较"
   },
   {
     "kind": "error",
@@ -730,6 +774,10 @@
   {
     "kind": "title",
     "text": "检查未通过，重新规划"
+  },
+  {
+    "kind": "title",
+    "text": "比较原始 reads 重算与已发布功能谱"
   },
   {
     "kind": "title",

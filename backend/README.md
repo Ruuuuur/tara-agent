@@ -337,3 +337,25 @@ uv run python deploy/check_function_study.py --source paper_reference --normaliz
 生产 Compose 默认启用 `TARA_STARTUP_WARMUP_ENABLED=true`，开发环境默认关闭。API 每次启动先做数据库就绪检查，再执行只读预热：建立不超过4条常驻池连接，走无效令牌的认证查询和随机不存在用户的会话查询，读取前2个样本、各标记至多2个样本的多样性，以及问题推荐。不会调用大模型、创建账号、写入会话/Trace或修改科学数据。预热完成后才开始处理HTTP请求。
 
 `TARA_STARTUP_WARMUP_TIMEOUT_SECONDS` 默认30秒；超时或可选路径失败会记录不含凭据的警告并继续启动，数据库本身不可用仍按既有规则阻止启动。日志可查 `Startup warmup completed` / `Startup warmup failed`。Docker已有开机自启和 `unless-stopped` 策略时，服务器重启、容器自动重启和重新部署均会重新预热，无需cron任务。此机制只降低冷启动延迟，不能保证长期运行后页面不再被换出，也不能替代构建与在线服务的资源隔离。
+## 原始 reads 小规模试点
+
+新增可选命令 `tara-reads`，提供 `plan`、`sample`、`download`、`reference`、`index`、
+`quantify` 六个离线步骤。原始文件、参考索引和派生结果不进入 Git。详细操作见根目录
+`deploy/README.md` 的“原始 reads 试点”。
+
+配置 `TARA_READ_JOBS_DIR` 且 MATOU 基线已经启用后，增加只读 MCP 工具
+`raw_read_study`。`{"query":{}}` 列出真实完成任务；
+`{"query":{"job_id":"lhc-metat-head-10000","top_n":20}}` 查询指定任务。
+API、进程内 MCP 与远程数据服务使用相同的契约和统一 Trace。
+
+工具不会从用户文本执行命令或启动下载。管理员先离线完成质控和比对，再开放只读产物。
+完整参考结果可比较同一文库的功能排名、Top N 重合及共同已观测功能的 Spearman；
+两侧先各自按全部类群基因信号归一化，未注释基因也进入分母，多结构域去重。
+候选子集参考仅报告候选比对和质控记录，不输出不可比的排名一致性指标。
+头部 reads 抽取是工程试点，不是随机抽样，也不能验证完整归档文件的 MD5。
+
+本实现使用 fastp + Bowtie2 的独立敏感性流程：固定 seed、记录软件版本，排除低 MAPQ、
+次要比对及低 identity/coverage，按 read/mate 计数再除以基因长度。
+不宣称复刻作者 BWA、去重及 RNA 处理流程，不将结果称作作者原始 RPKM。
+已完成真实ENA头部小样本下载、候选参考生信端到端、相关软件测试及隔离API自然语言问答。
+当前严格筛选后候选比对为零，不解释成生物学缺失；公网生产切换和浏览器展示仍须验收。

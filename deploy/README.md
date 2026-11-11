@@ -137,3 +137,133 @@ TARA_HTTPS_PORT=443
 ## 自动启动预热
 
 Docker 服务已设置开机启动且容器采用 `restart: unless-stopped` 时，后端每次启动会重新执行预热。生产模板默认 `TARA_STARTUP_WARMUP_ENABLED=true`，只读预热数据库连接、认证/会话查询、少量样本与V4/V9计算和问题推荐，不调用模型或产生产品记录。预热默认最多30秒，失败记录警告后继续启动；数据库不可用仍按原启动规则处理。通过 `Startup warmup completed` 日志确认成功，可用 `TARA_STARTUP_WARMUP_ENABLED=false` 关闭。预热降低冷启动延迟，不替代将大型镜像构建与在线服务错峰或隔离。
+## 原始 reads 试点
+
+### 范围和状态
+
+1. **小规模流程验证**：一个明确对应的 Tara 样本，各技术 Run 抽取少量双端 reads，使用
+   LHC（PF00504）候选参考，验证质控、比对、计数和网页工具。
+   这能检验输入输出与候选检测，不提供完整 Top100 稳定性结论。
+2. **同文库功能谱敏感性分析**：使用完整版本化参考目录、类群基因全集和同文库已发布数据，
+   比较功能排名、份额和共同已观测家族的 Spearman。必须说明重算算法、抽样和质控差异。
+3. **跨环境科学结论稳定性**：仍需多个独立样本、具有代表性的抽样及匹配的方法和分母，
+   重新检验原有统计关系。当前工具未实现自动完成这一层验证。
+
+当前验证记录：已按 Supplementary Data 8 的准确 Run 编号下载一个采样背景的
+MetaG/MetaT头部试点数据，保留配对及SHA256；完成相关软件测试。
+独立工作镜像已构建，fastp 0.23.2/Bowtie2 2.5.0 的真实小样本流程已完成；
+隔离API的自然语言问答也已验证。尚未切换公网生产后端，浏览器界面仍需人工验收。
+原始归档大小约 MetaG 28.53 GiB、MetaT 41.48 GiB，不应在小型网站服务器直接下载全部。
+2核/约4GiB内存的网站服务器先采用候选参考和小样本，并将工作容器限为1核、1.5GiB；
+预检不保证生信任务成功，内存不足时停止任务或转移计算环境，不扩大在线进程配额。
+
+真实试跑记录：`lhc-metag-head-10000-v3`与`lhc-metat-head-10000-v3`。
+四个Run分别为ERR868465、ERR868424、ERR1740118、ERR1740132，
+质控后reads分别为17,832、18,732、17,842、17,700，初始主比对分别为1、6、5、6，
+通过MAPQ/identity/coverage全部规则的候选比对均为0。结果不是“功能不存在”的证据。
+只保留头部小抽样和单功能候选参考，不能据此判断原有排名或跨环境结论稳定。
+初次fastp默认重复率评估在内存限额下终止，失败目录保留；后续关闭该报告项。
+未核验接头序列前关闭自动剪切，保留质量/长度过滤；真实参数与软件版本均写入产物。
+
+### 数据来源
+
+- [MATOU原始论文](https://www.nature.com/articles/s41467-017-02342-1)：Supplementary Data 8
+  中N列Sample Code、B列BioSamples、C列Type和L列Run accession是映射依据。
+- [ENA MetaG项目](https://www.ebi.ac.uk/ena/browser/view/PRJEB4352) 与
+  [ENA MetaT项目](https://www.ebi.ac.uk/ena/browser/view/PRJEB6609)。按具体Run验证实验类型、
+  双端布局和BioSample，不从同一BioSample的所有实验中任意挑选。
+- [fastp](https://github.com/OpenGene/fastp)、
+  [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml)、
+  [SAM规范](https://samtools.github.io/hts-specs/SAMv1.pdf)：当前独立重算方法的工具与格式依据。
+
+### 下载清单与小样本
+
+以下在具有项目Python环境的机器执行；所有路径为管理员明确指定的独立目录。
+
+```bash
+cd backend
+uv run tara-reads plan --supplement /path/to/supplementary-data-8.xlsx \
+  --samples 100DCM1GGMM11 --output /pilot/metag.json
+uv run tara-reads plan --supplement /path/to/supplementary-data-8.xlsx \
+  --samples 100DCM1GGMM14 --output /pilot/metat.json
+uv run tara-reads sample --manifest /pilot/metag.json --pairs 10000 \
+  --directory /pilot/sampled-metag --output /pilot/metag-head-10000.json
+uv run tara-reads sample --manifest /pilot/metat.json --pairs 10000 \
+  --directory /pilot/sampled-metat --output /pilot/metat-head-10000.json
+```
+
+`sample`从每个Run的HTTPS gzip流抽取完整FASTQ记录，逐对核对编号。仅下载所需前部，
+保存新文件自己的MD5/SHA256，**未核验完整归档的MD5，不称随机抽样**。
+完整下载另用`download --manifest /pilot/metag.json --directory /pilot/raw --max-gb 30`，
+完成后才按ENA文件大小与MD5核验；中断的`.partial`文件不视为有效文件，首版不自动覆盖或续传。
+
+### 独立工作容器
+
+先确认当前网站部署目录、MATOU缓存位置和镜像构建资源。下列操作不重启网站、不运行迁移。
+构建较重时应在独立构建机生成镜像后导入，避免与在线服务抢资源。
+默认使用Debian官方HTTPS源；国内连接较慢时，可在构建参数中指定
+`--build-arg DEBIAN_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian`。
+只调整试验镜像的软件源，仍使用Debian签名验证，不修改主机或在线容器的软件源。
+
+```bash
+# 在包含本分支代码的仓库根目录构建独立镜像；BACKEND_IMAGE取当前核验的后端镜像。
+docker build --build-arg TARA_BACKEND_IMAGE="$BACKEND_IMAGE" \
+  -f deploy/Dockerfile.reads -t tara-reads-pilot:dev .
+```
+
+把试点资料解压到`/home/ubuntu/tara-read-pilot`，包含候选FASTA及来源JSON、两份
+抽样输入清单、8个FASTQ和与现有MATOU清单匹配的`gene_ids.tsv`。
+先设置`MATOU_DIR`为**当前服务实际使用**的MATOU处理目录，不凭本地旧路径猜测。
+
+```bash
+# 此变量必须换成核验过的实际服务器路径。
+MATOU_DIR=/absolute/path/to/current/matou
+PILOT_DIR="$HOME/tara-read-pilot"
+mkdir -p "$PILOT_DIR/jobs"
+
+docker run --rm --network none --read-only --tmpfs /tmp:size=64m \
+  --cpus=1 --memory=1536m --memory-swap=1536m --user "$(id -u):$(id -g)" \
+  -v "$PILOT_DIR:/pilot" tara-reads-pilot:dev \
+  index --reference /pilot/LHC-candidate.fna --scope candidate_subset \
+  --output /pilot/lhc-index --threads 1 --hours 2
+
+docker run --rm --network none --read-only --tmpfs /tmp:size=64m \
+  --cpus=1 --memory=1536m --memory-swap=1536m --user "$(id -u):$(id -g)" \
+  -v "$PILOT_DIR:/pilot" -v "$MATOU_DIR:/matou:ro" tara-reads-pilot:dev \
+  quantify --manifest /pilot/plans/metat-head-10000.json --fastq /pilot/sampled-metat \
+  --index /pilot/lhc-index --matou-dir /matou --gene-ids /pilot/gene_ids.tsv \
+  --jobs /pilot/jobs --job-id lhc-metat-head-10000 --threads 1 --hours 2
+```
+
+DNA试点将输入改为`plans/metag-head-10000.json`、`sampled-metag`及独立的
+`lhc-metag-head-10000`任务编号。一次处理一个文库的全部已列技术runs，DNA与RNA不混算。
+输出目录不能复用；失败时保留日志，使用新任务编号重跑，只有最后生成的`result.json`
+代表流程完成。结果、输入清单及基因谱摘要在读取时重新校验，基线变更后拒绝静默混用。
+
+候选参考可从已有核验序列导出：
+`uv run tara-reads reference --matou-dir /matou --pfam PF00504 --output /pilot/LHC-candidate.fna`。
+完整参考索引只用于资源充足且核验过完整目录的环境；首版不提供原始reads重新组装。
+
+### 网页接入与验收
+
+先在隔离发布目录和测试端口运行新版后端。设置`TARA_READ_JOBS_DIR=/data/read-jobs`，
+把服务器`jobs`目录只读挂载到该路径；`deploy/compose.reads.yaml`是附加配置示例，
+使用前核对现有生产Compose文件，**不能用仓库示例直接覆盖当前部署**。
+未设置此配置时，现有工具和分析行为不变。
+
+1. 先独立检查`tara-reads`输出、fastp报告、Bowtie2日志、两端记录和实际版本。
+2. 网页问：“有哪些已经完成的原始reads重算试点？列出任务编号、文库和实验类型。”
+   应调用`raw_read_study`，`query={}`，只列出真实完成任务。
+3. 问：“查看lhc-metat-head-10000的质控及候选LHC检测结果，说明能否据此判断功能排名稳定。”
+   候选参考应返回逐Run统计，并明确`not_comparable_reference_subset`，不得声称完整排名稳定。
+4. 在完整参考结果就绪后问：“比较指定重算任务与同一文库已发布的Top20功能，报告重合和份额差异。”
+   应返回实际比较表、散点、样本范围与限制，不能使用论文预期值作为计算输入。
+5. 刷新会话并检查同一Trace的工具输入、结果、来源和警告；未知任务、改动过的产物或基线
+   应明确失败，不生成科学结论。未上线或无任务时不把功能可用当作计算已完成。
+
+### GitHub合并
+
+数据包单独上传，Git只合并代码、测试和说明。开发分支为`codex/raw-reads-pilot`，
+基于`Ruuuuur/tara-agent`当前核验的主分支。没有该仓库直接写权限时，推送到自己的fork后
+向`Ruuuuur/tara-agent:main`创建PR；先保持草稿，待Docker、生信端到端和隔离网页验收后再请求合并。
+合并代码不会自动上传数据、构建镜像或启用网站上的工具，这些是独立部署步骤。

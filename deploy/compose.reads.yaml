@@ -1,0 +1,12 @@
+# 仅在确认当前实际部署文件和MATOU挂载后附加；不要单独启动或替换生产配置。
+services:
+  backend:
+    environment:
+      TARA_READ_JOBS_DIR: /data/read-jobs
+    volumes:
+      - type: bind
+        source: ${TARA_READ_JOBS_HOST_DIR:?请指定已验证的离线任务目录}
+        target: /data/read-jobs
+        read_only: true
+        bind:
+          create_host_path: false

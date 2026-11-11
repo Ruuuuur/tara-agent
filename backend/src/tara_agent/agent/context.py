@@ -7,6 +7,7 @@ from typing import Any
 from tara_agent.agent.models import ToolName
 
 DETAIL_FIELDS_BY_TOOL: dict[ToolName, frozenset[str]] = {
+    ToolName.RAW_READ_STUDY: frozenset(),
     ToolName.COMMUNITY_ANALYSIS: frozenset(
         {
             "observations",

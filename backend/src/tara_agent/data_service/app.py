@@ -111,7 +111,10 @@ def create_app(
         else None
     )
     research = ResearchContext(reader.processed_dir)
-    gateway = MCPToolGateway(create_server(reader, matou_reader=matou_reader, research=research))
+    gateway = MCPToolGateway(create_server(
+        reader, matou_reader=matou_reader, research=research,
+        read_jobs_dir=runtime_settings.read_jobs_dir,
+    ))
     suggestions = QuestionSuggestionService.from_reader(gateway, reader)
     code_sha256 = runtime_code_sha256()
 

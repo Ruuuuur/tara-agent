@@ -45,6 +45,7 @@ from tara_agent.analysis.models import (
     FindTaxaResult,
     SampleInfoResult,
 )
+from tara_agent.analysis.read_models import ReadStudyQuery, ReadStudyResult
 
 
 class WorkflowSelection(BaseModel):
@@ -118,6 +119,7 @@ class AnalysisLimits(BaseModel):
 
 
 QUERY_MODELS = {
+    ToolName.RAW_READ_STUDY: ReadStudyQuery,
     ToolName.COMMUNITY_ANALYSIS: CommunityQuery,
     ToolName.FUNCTION_ENVIRONMENT: FunctionEnvironmentQuery,
     ToolName.FIND_SAMPLES: FindSamplesQuery,
@@ -170,6 +172,7 @@ def completion_issue(goals: list[str], checks: list[GoalCheck], steps: list[dict
 
 
 RESULT_MODELS = {
+    ToolName.RAW_READ_STUDY: ReadStudyResult,
     ToolName.COMMUNITY_ANALYSIS: CommunityResult,
     ToolName.FUNCTION_ENVIRONMENT: FunctionEnvironmentResult,
     ToolName.FIND_SAMPLES: FindSamplesResult,

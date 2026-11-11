@@ -27,6 +27,7 @@ class ToolName(StrEnum):
     FUNCTION_STUDY = "function_study"
     COMPARE_FUNCTION_SIGNALS = "compare_function_signals"
     RETRIEVE_GENE_SEQUENCES = "retrieve_gene_sequences"
+    RAW_READ_STUDY = "raw_read_study"
 
 
 MATOU_TOOLS = frozenset(
@@ -38,6 +39,7 @@ MATOU_TOOLS = frozenset(
         ToolName.FUNCTION_STUDY,
         ToolName.COMPARE_FUNCTION_SIGNALS,
         ToolName.RETRIEVE_GENE_SEQUENCES,
+        ToolName.RAW_READ_STUDY,
     }
 )
 CORE_TOOLS = frozenset(ToolName) - MATOU_TOOLS
@@ -123,6 +125,7 @@ class AnalysisCapability(StrEnum):
     FUNCTION_STUDY = "function_study"
     FUNCTION_COMPARISON = "function_comparison"
     GENE_SEQUENCES = "gene_sequences"
+    RAW_READ_STUDY = "raw_read_study"
 
 
 class RouteDecision(BaseModel):

@@ -71,6 +71,13 @@ CAPABILITY_PROFILE = {
     ],
     "conditional_capabilities": [
         {
+            "required_tools": ["raw_read_study"],
+            "description": (
+                "查询ENA原始reads离线重算任务；对同一文库的Pfam排名和相对贡献进行描述性比较。"
+                "不在网页启动下载、质控和比对，单文库试点不证明全部科研结果稳定。"
+            ),
+        },
+        {
             "required_tools": ["function_environment"],
             "description": (
                 "一个目标Pfam的MetaG/MetaT信号与context_stat关联；"
@@ -110,7 +117,7 @@ CAPABILITY_PROFILE = {
 }
 
 ROUTER_PROMPT_RESOURCE = _resource("prompt.request_router", "1.11.0", ROUTER_SYSTEM_PROMPT)
-PLANNER_PROMPT_RESOURCE = _resource("prompt.tool_planner", "1.12.0", PLANNER_SYSTEM_PROMPT)
+PLANNER_PROMPT_RESOURCE = _resource("prompt.tool_planner", "1.13.0", PLANNER_SYSTEM_PROMPT)
 ANSWER_PROMPT_RESOURCE = _resource("prompt.analysis_answer", "1.11.0", ANSWER_SYSTEM_PROMPT)
 SELECTOR_PROMPT_RESOURCE = _resource(
     "prompt.workflow_selector", "1.4.0", WORKFLOW_SELECTOR_SYSTEM_PROMPT
@@ -118,7 +125,7 @@ SELECTOR_PROMPT_RESOURCE = _resource(
 MULTI_PLANNER_PROMPT_RESOURCE = _resource(
     "prompt.multi_step_planner", "1.9.0", MULTI_STEP_SYSTEM_PROMPT
 )
-CAPABILITY_RESOURCE = _resource("capability.tara_agent", "1.7.0", CAPABILITY_PROFILE)
+CAPABILITY_RESOURCE = _resource("capability.tara_agent", "1.8.0", CAPABILITY_PROFILE)
 WORKFLOW_RESOURCE = _resource(
     "workflow.tara_agent_request",
     "1.8.0",
