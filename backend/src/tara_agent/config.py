@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     dataset_dir: Path = PROJECT_ROOT / "Tara_4_Core_Datasets"
     processed_data_dir: Path = BACKEND_ROOT / "data" / "processed"
     matou_data_dir: Path | None = None
+    read_jobs_dir: Path | None = None
     data_service_url: str | None = None
     data_service_token_file: Path | None = None
     data_service_timeout_seconds: float = Field(default=120, gt=0, le=600)
@@ -61,6 +62,7 @@ class Settings(BaseSettings):
         "dataset_dir",
         "processed_data_dir",
         "matou_data_dir",
+        "read_jobs_dir",
         "data_service_token_file",
         mode="before",
     )

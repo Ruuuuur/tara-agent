@@ -1,5 +1,18 @@
 // 仅匹配后端完整固定文案；不做片段替换或改写原始诊断。
 export const backendDisplayEnglish: Record<string, string> = {
+  "比较原始 reads 重算与已发布功能谱": "Compare raw-read recalculation with published functional profiles",
+  "reads 产物不完整或已变化": "The read-analysis artifacts are incomplete or have changed.",
+  "reads任务无法核验或计算，请检查离线任务产物与MATOU版本": "The read-analysis job could not be verified or calculated. Check its offline artifacts and MATOU version.",
+  "不支持的 reads 结果版本": "This read-analysis result version is unsupported.",
+  "定量数据为空、重复、缺失或包含无效数值": "Quantification data are empty, duplicated, missing, or contain invalid values.",
+  "未得到正信号功能，不能比较排名": "No functions with positive signals were found; rankings cannot be compared.",
+  "没有可用的类群总信号，不能计算功能份额": "No usable total taxon signal is available; functional fractions cannot be calculated.",
+  "重算任务不存在；请先查询可用任务": "The recalculation job does not exist. List the available jobs first.",
+  "重算基因谱格式不匹配": "The recalculated gene-profile format does not match the contract.",
+  "重算未包含清单中的全部技术 runs": "The recalculation does not include every technical run in the manifest.",
+  "重算绑定的 MATOU 基线已变化，需重新生成": "The MATOU baseline bound to this recalculation has changed. Regenerate the job.",
+  "重算输入包含其他文库，不能混合比较": "The recalculation input contains other libraries; they cannot be pooled for comparison.",
+  "比较原始 reads 重算功能谱": "Compare the functional profile recalculated from raw reads",
   "组织可追踪答案": "Prepare a traceable answer",
   "识别请求类型": "Identify the request type",
   "读取全部真核生物读数分母": "Read the denominator of all eukaryotic reads",

@@ -104,7 +104,10 @@ def create_app(
             else None
         )
         application.state.matou_reader = matou_reader
-        mcp_server = create_server(application.state.data_reader, matou_reader=matou_reader)
+        mcp_server = create_server(
+            application.state.data_reader, matou_reader=matou_reader,
+            read_jobs_dir=runtime_settings.read_jobs_dir,
+        )
         gateway = MCPToolGateway(mcp_server)
 
         def function_cache_ready():

@@ -1,14 +1,18 @@
 """MCP 服务工厂和标准输入输出入口。"""
 
+from pathlib import Path
+
 from mcp.server import MCPServer
 
 from tara_agent.analysis import TaraComputeService, TaraQueryService
 from tara_agent.analysis.function_service import MatouFunctionService
+from tara_agent.analysis.read_study import ReadStudyService
 from tara_agent.config import get_settings
 from tara_agent.data.matou_reader import MatouDataReader
 from tara_agent.data.reader import ProcessedDataReader
 from tara_agent.data.research_context import ResearchContext
 from tara_agent.mcp.function_tools import register_function_tools
+from tara_agent.mcp.read_tools import register_read_tools
 from tara_agent.mcp.research_tools import register_research_tools
 from tara_agent.mcp.tools import register_tools
 
@@ -18,6 +22,7 @@ def create_server(
     *,
     matou_reader: MatouDataReader | None = None,
     research: ResearchContext | None = None,
+    read_jobs_dir: Path | None = None,
 ) -> MCPServer:
     """基于一个已校验的处理后数据读取器创建 Tara MCP 服务。"""
 
@@ -26,6 +31,7 @@ def create_server(
         reader = ProcessedDataReader(settings.processed_data_dir)
         if settings.matou_data_dir is not None:
             matou_reader = MatouDataReader(settings.matou_data_dir)
+        read_jobs_dir = settings.read_jobs_dir
 
     server = MCPServer(
         name="tara-agent",
@@ -45,6 +51,8 @@ def create_server(
     )
     if matou_reader is not None:
         register_function_tools(server, MatouFunctionService(matou_reader))
+        if read_jobs_dir is not None:
+            register_read_tools(server, ReadStudyService(read_jobs_dir, matou_reader))
     register_research_tools(
         server, reader, matou_reader, research or ResearchContext(reader.processed_dir)
     )

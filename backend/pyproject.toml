@@ -26,6 +26,7 @@ dependencies = [
 [project.scripts]
 tara-data = "tara_agent.data.cli:main"
 tara-mcp = "tara_agent.mcp.server:main"
+tara-reads = "tara_agent.data.read_pipeline:main"
 
 [dependency-groups]
 dev = [

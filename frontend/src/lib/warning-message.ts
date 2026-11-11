@@ -3,6 +3,18 @@ import type { ResultWarning } from "./types";
 
 // 只翻译已知代码对应的完整应用提示，避免改写科学数据和未知诊断。
 const messages: Record<string, [string, string]> = {
+  reads_head_sampling: [
+    "仅抽取各run头部reads对，非随机抽样；未下载完整归档文件，不能验证原始MD5。",
+    "Only the first read pairs of each run were extracted, rather than a random sample. The complete archive files were not downloaded, so their original MD5 checksums were not verified.",
+  ],
+  reads_pilot_not_global_validation: [
+    "单文库描述性比较；重算采用独立的唯一比对与质控规则，并非原作者流程复刻。功能可共享基因，份额不可相加；缺少记录不补为生物学零值。不能据此认定跨环境趋势、DNA/RNA活性或总体结果稳定。",
+    "This is a descriptive, single-library comparison using independent mapping and quality-control rules, rather than a reproduction of the authors' pipeline. Functions can share genes, so their fractions cannot be added. Missing records are not biological zeros. This does not establish cross-environment trends, RNA/DNA activity, or overall result stability.",
+  ],
+  reads_subset_reference: [
+    "使用候选序列子集参考，存在竞争比对与分母偏差，不能验证原功能排名。",
+    "A candidate-sequence subset was used as the reference. Missing competing sequences and a different denominator prevent validation of the original functional rankings.",
+  ],
   unrarefied_diversity: [
     "观测丰富度和 Shannon 指数基于未经稀释抽样的测序读数计算，测序量差异可能影响样本间比较。",
     "Observed richness and the Shannon index are calculated from unrarefied sequencing read counts. Differences in sequencing depth may affect comparisons between samples.",

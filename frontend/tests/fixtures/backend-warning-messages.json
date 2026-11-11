@@ -92,6 +92,18 @@
     "message": "按测序读数阈值排除样本仅用于敏感性分析；保留样本仍未进行测序深度标准化。"
   },
   {
+    "code": "reads_head_sampling",
+    "message": "仅抽取各run头部reads对，非随机抽样；未下载完整归档文件，不能验证原始MD5。"
+  },
+  {
+    "code": "reads_pilot_not_global_validation",
+    "message": "单文库描述性比较；重算采用独立的唯一比对与质控规则，并非原作者流程复刻。功能可共享基因，份额不可相加；缺少记录不补为生物学零值。不能据此认定跨环境趋势、DNA/RNA活性或总体结果稳定。"
+  },
+  {
+    "code": "reads_subset_reference",
+    "message": "使用候选序列子集参考，存在竞争比对与分母偏差，不能验证原功能排名。"
+  },
+  {
     "code": "reference_scope",
     "message": "paper_reference使用作者公开汇总表；current_data使用当前唯一gene–Pfam候选映射，仅保留DNA11/cDNA14。两者的结构域计数、样本范围和分母不同，不能声称精确复现。"
   },

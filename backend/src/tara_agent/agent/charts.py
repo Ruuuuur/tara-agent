@@ -8,6 +8,18 @@ from tara_agent.agent.models import ChartKind, ChartSpec, ToolName
 
 
 def build_charts(tool_name: ToolName, result: dict[str, Any]) -> list[ChartSpec]:
+    if tool_name is ToolName.RAW_READ_STUDY:
+        rows = [r for r in result.get("observations", [])
+                if r.get("published_fraction") is not None
+                and r.get("recalculated_fraction") is not None]
+        return [ChartSpec(
+            kind=ChartKind.SCATTER, title="Published and recalculated Pfam contributions",
+            x=[r["published_fraction"] for r in rows],
+            y=[r["recalculated_fraction"] for r in rows],
+            labels=[r["pfam_accession"] for r in rows],
+            x_label="Published within-taxon fraction",
+            y_label="Recalculated within-taxon fraction",
+        )] if rows else []
     if tool_name is ToolName.COMMUNITY_ANALYSIS:
         return _community_charts(result)
     if tool_name is ToolName.FUNCTION_ENVIRONMENT:

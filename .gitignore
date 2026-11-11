@@ -37,6 +37,13 @@ yarn-error.log*
 Tara_4_Core_Datasets/
 TaraData/
 backend/data/processed/
+read-pilot/
+*.fastq.gz
+*.fq.gz
+*.bt2
+*.bt2l
+*.sam
+*.bam
 *.dump
 
 # Local reference documents
