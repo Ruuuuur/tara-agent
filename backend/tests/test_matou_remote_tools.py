@@ -23,7 +23,8 @@ from .test_data_service import service_settings as service_settings
 from .test_matou_function_data import dataset as dataset
 
 TOKEN = "matou-remote-test-token-0123456789abcdef"
-AVAILABLE_MATOU_TOOLS = MATOU_TOOLS - {ToolName.FUNCTION_STUDY}
+# 这些夹具未配置论文参考包或离线 reads 任务；可选工具不应被当作默认能力。
+AVAILABLE_MATOU_TOOLS = MATOU_TOOLS - {ToolName.FUNCTION_STUDY, ToolName.RAW_READ_STUDY}
 
 
 @pytest.fixture
@@ -310,3 +311,21 @@ async def test_function_mcp_has_typed_output_and_read_only_annotations(matou_set
         assert tools[tool].output_schema
         assert tools[tool].annotations.read_only_hint
         assert tools[tool].annotations.open_world_hint is False
+
+
+def test_read_jobs_tool_requires_explicit_configuration(matou_setup, tmp_path):
+    settings, _, default_app = matou_setup
+    headers = {"Authorization": f"Bearer {TOKEN}"}
+    with TestClient(default_app, headers=headers) as client:
+        assert ToolName.RAW_READ_STUDY not in {t["name"] for t in client.get("/tools").json()}
+    jobs = tmp_path / "read-jobs"
+    jobs.mkdir()
+    configured = create_app(settings.model_copy(update={"read_jobs_dir": jobs}), token=TOKEN)
+    with TestClient(configured, headers=headers) as client:
+        assert ToolName.RAW_READ_STUDY in {t["name"] for t in client.get("/tools").json()}
+        response = client.post("/call", json=body(client, "raw_read_study", {"query": {}}))
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["error"] is None
+        assert payload["result"]["status"] == "available_jobs"
+        assert payload["result"]["items"] == []
