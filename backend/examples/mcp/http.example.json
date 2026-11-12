@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "tara": {
+      "url": "https://YOUR_HOST/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_YOUR_PRIVATE_TOKEN"
+      }
+    }
+  }
+}

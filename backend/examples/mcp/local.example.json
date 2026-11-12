@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tara": {
+      "command": "/ABSOLUTE/PATH/TO/backend/.venv/bin/tara-mcp",
+      "args": ["--processed-data-dir", "/ABSOLUTE/PATH/TO/processed", "--core-only"]
+    }
+  }
+}

@@ -48,14 +48,11 @@ class FindSamplesQuery(BaseModel):
     polar: bool | None = None
     depths: list[SamplingDepth] = Field(
         default_factory=list,
-        description=(
-            "Tara 规范深度代码。SRF 表示表层，同时接受“表层”和 surface 作为 "
-            "SRF 的别名。"
-        ),
+        description=("Tara 规范深度代码。SRF 表示表层，同时接受“表层”和 surface 作为 SRF 的别名。"),
     )
     size_fractions: list[str] = Field(default_factory=list)
-    temperature_min: float | None = None
-    temperature_max: float | None = None
+    temperature_min: float | None = Field(default=None, allow_inf_nan=False)
+    temperature_max: float | None = Field(default=None, allow_inf_nan=False)
     offset: int = Field(default=0, ge=0)
     limit: int = Field(default=100, ge=1, le=500)
 

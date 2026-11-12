@@ -1,6 +1,9 @@
 """群落与跨库关联工具薄层；数据映射和科学计算不在MCP内实现。"""
 
+from typing import Annotated
+
 from mcp.server.mcpserver.exceptions import ToolError
+from pydantic import Field
 
 from tara_agent.analysis.community import CommunityService
 from tara_agent.analysis.community_models import (
@@ -28,7 +31,26 @@ def register_research_tools(server, reader, matou_reader, research):
             "context_stat只分析其可用变量。缺资料仅阻断依赖项目，不补零或猜映射。"
         ),
     )
-    def community_analysis(query: CommunityQuery) -> CommunityResult:
+    def community_analysis(
+        query: Annotated[
+            CommunityQuery,
+            Field(
+                description=(
+                    "Independent-marker community analyses. Select outputs explicitly; "
+                    "check status and sections for blocked/partial analyses. "
+                    "Ordination can be expensive; do not run it for a simple lookup."
+                ),
+                examples=[
+                    {
+                        "markers": ["v4"],
+                        "taxon": "Bacillariophyta",
+                        "outputs": ["distribution", "diversity"],
+                        "environment_source": "context_stat",
+                    }
+                ],
+            ),
+        ],
+    ) -> CommunityResult:
         try:
             return community.analyze(query)
         except ValueError as error:

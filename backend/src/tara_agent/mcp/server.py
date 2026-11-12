@@ -11,10 +11,12 @@ from tara_agent.config import get_settings
 from tara_agent.data.matou_reader import MatouDataReader
 from tara_agent.data.reader import ProcessedDataReader
 from tara_agent.data.research_context import ResearchContext
+from tara_agent.mcp.catalog import register_catalog
 from tara_agent.mcp.function_tools import register_function_tools
 from tara_agent.mcp.read_tools import register_read_tools
 from tara_agent.mcp.research_tools import register_research_tools
 from tara_agent.mcp.tools import register_tools
+from tara_agent.mcp.transport import TaraMCPServer
 
 
 def create_server(
@@ -33,7 +35,14 @@ def create_server(
             matou_reader = MatouDataReader(settings.matou_data_dir)
         read_jobs_dir = settings.read_jobs_dir
 
-    server = MCPServer(
+    research = research or ResearchContext(reader.processed_dir)
+    server = TaraMCPServer(
+        data_context={
+            "core_generation": reader.manifest.generation,
+            "core_pipeline_version": reader.manifest.pipeline_version,
+            "matou_manifest_sha256": matou_reader.manifest_record.sha256 if matou_reader else None,
+            "research_manifest_sha256": research.sha256,
+        },
         name="tara-agent",
         title="Tara Agent",
         version="0.1.0",
@@ -41,7 +50,11 @@ def create_server(
             "Query and analyze validated Tara Oceans data using available tools. "
             "V4 and V9 require an explicit marker and remain independent. "
             "MATOU requires an explicit MetaG/MetaT assay and original sample name; "
-            "candidate function signals do not establish physical units or DNA/RNA pairing."
+            "candidate function signals do not establish physical units or DNA/RNA pairing. "
+            "Pass tool arguments as JSON objects (most tools take a nested query object). "
+            "Preserve metadata.warnings and metadata.provenance in your answer. "
+            "Read tara://data/catalog for configured data versions and source hashes. "
+            "An isError result is a failed call, not an empty scientific result."
         ),
     )
     register_tools(
@@ -53,13 +66,14 @@ def create_server(
         register_function_tools(server, MatouFunctionService(matou_reader))
         if read_jobs_dir is not None:
             register_read_tools(server, ReadStudyService(read_jobs_dir, matou_reader))
-    register_research_tools(
-        server, reader, matou_reader, research or ResearchContext(reader.processed_dir)
-    )
+    register_research_tools(server, reader, matou_reader, research)
+    register_catalog(server, reader, matou_reader, research)
     return server
 
 
 def main() -> None:
     """通过标准输入输出传输方式运行 Tara MCP 服务。"""
 
-    create_server().run(transport="stdio")
+    from tara_agent.mcp.cli import main as run
+
+    run()

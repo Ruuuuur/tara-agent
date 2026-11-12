@@ -17,7 +17,12 @@ class MarkerSampleSelection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     marker: Marker
-    sample_ids: list[str] | None = Field(default=None, max_length=500)
+    sample_ids: list[str] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=500,
+        description="Exact PANGAEA IDs from find_samples; must occur in the selected marker.",
+    )
 
     @field_validator("sample_ids")
     @classmethod

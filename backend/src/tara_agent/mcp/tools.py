@@ -29,7 +29,9 @@ from tara_agent.data.catalog import source_filename
 from tara_agent.observability.contracts import ObservationKind, ObservationUpdate
 from tara_agent.observability.execution import observe
 
-READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
+READ_ONLY = ToolAnnotations(
+    read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False
+)
 
 
 def register_tools(
@@ -50,7 +52,12 @@ def register_tools(
             ),
         ],
     ) -> FindSamplesResult:
-        """使用明确且受限的环境条件查询样本背景信息。"""
+        """Find PANGAEA sample IDs and context using ocean, depth, size or temperature filters.
+
+        Returns items, pagination and metadata (sources, applied filters, exclusions, warnings).
+        Use returned IDs in get_sample_info or marker-specific analysis; an empty page
+        is not evidence that a taxon is absent. Depth aliases surface/表层 mean SRF.
+        """
 
         return _call(
             "TaraQueryService.find_samples",
@@ -70,7 +77,12 @@ def register_tools(
             ),
         ],
     ) -> SampleInfoResult:
-        """根据准确的 PANGAEA 样本 ID 获取完整且已校验的背景信息。"""
+        """Get validated context and environmental metadata for one exact PANGAEA sample ID.
+
+        Discover IDs with find_samples; this does not accept a station or MATOU name.
+        Missing observations remain null; unknown IDs return an error. Sources and
+        limitations are in metadata.provenance and metadata.warnings.
+        """
 
         return _call(
             "TaraQueryService.get_sample_info",
@@ -88,7 +100,12 @@ def register_tools(
             ),
         ],
     ) -> FindTaxaResult:
-        """在指定标记中查询匹配的 ASV 及其样本出现情况。"""
+        """Find ASVs and sample occurrences for a taxon in one explicit v4 or v9 marker.
+
+        match_mode=level matches a complete taxonomy component, contains a literal
+        substring. ASVs and samples are paginated separately; V4 and V9 stay independent.
+        Returns source records, filters, counts and warnings in metadata.
+        """
 
         return _call(
             "TaraQueryService.find_taxa",
@@ -106,7 +123,11 @@ def register_tools(
             ),
         ],
     ) -> TaxonAbundanceResult:
-        """计算类群测序相对丰度。order_by=relative_abundance 在全集计算后排序再分页。
+        """Compute taxon reads / all reads within each sample of one marker (not cell abundance).
+
+        sample_ids are exact PANGAEA IDs present in that marker; omit for all marker samples.
+        Returns observations, pagination, source/filter metadata and warnings.
+        order_by=relative_abundance sorts the whole selection before pagination.
 
         group_by=station 返回站点等权样本均值、最大值及两套排名，aggregation 控制列表排序。
         taxonomic_rank=genus/species/asv 返回 1–20 个指定样本内所选类群组成，
@@ -130,7 +151,12 @@ def register_tools(
             ),
         ],
     ) -> DiversityResult:
-        """计算未稀释抽样的观测 ASV 丰富度与 Shannon 多样性。"""
+        """Compute unrarefied observed ASV richness and Shannon diversity for one marker.
+
+        Optional taxon selection and group_by summaries use the full selected scope
+        before pagination. Reads and ASVs from V4/V9 are never pooled. Read-depth
+        differences limit comparisons; retain metadata.warnings and provenance.
+        """
 
         return _call(
             "TaraComputeService.diversity_analysis",
@@ -154,7 +180,13 @@ def register_tools(
             ),
         ],
     ) -> EnvironmentAssociationResult:
-        """计算一次基于成对完整观测值的 Spearman 丰度关联。"""
+        """Spearman association of a taxon relative abundance with one allowed environment variable.
+
+        Use exact PANGAEA sample IDs and one explicit marker. Only paired complete
+        observations enter the test; missing or constant data can make rho/p null,
+        with an explanatory warning (not a zero coefficient). point_limit affects
+        returned plot points, not the analysis population. Association is not causation.
+        """
 
         return _call(
             "TaraComputeService.environment_association",
@@ -195,8 +227,5 @@ def _result_details(result: Any) -> ObservationUpdate:
         filters=provenance.get("filters") or None,
         marker=str(marker) if marker is not None else None,
         sample_count=sample_count if isinstance(sample_count, int) else None,
-        data_sources=[
-            {"filename": source_filename(str(dataset))}
-            for dataset in source_datasets
-        ],
+        data_sources=[{"filename": source_filename(str(dataset))} for dataset in source_datasets],
     )

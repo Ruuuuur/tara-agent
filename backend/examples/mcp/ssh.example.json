@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "tara": {
+      "command": "ssh",
+      "args": [
+        "-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15",
+        "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3",
+        "tara-data-host",
+        "/ABSOLUTE/PATH/TO/backend/.venv/bin/tara-mcp --processed-data-dir /ABSOLUTE/PATH/TO/processed --core-only"
+      ]
+    }
+  }
+}

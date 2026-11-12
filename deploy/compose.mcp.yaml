@@ -1,0 +1,43 @@
+# 与生产 compose.yaml 合并；MCP 独立进程，数据只读，无网站数据库及模型密钥。
+services:
+  mcp:
+    image: ${TARA_MCP_IMAGE:?Set TARA_MCP_IMAGE to the reviewed backend image}
+    restart: unless-stopped
+    init: true
+    entrypoint: ["/app/.venv/bin/python"]
+    command: ["-m", "uvicorn", "tara_agent.mcp.http:create_app", "--factory", "--host", "0.0.0.0", "--port", "8012", "--workers", "1", "--no-access-log"]
+    environment:
+      POLARS_MAX_THREADS: "1"
+      TARA_MCP_PUBLIC_URL: ${TARA_MCP_PUBLIC_URL:?Set the HTTPS /mcp URL}
+      TARA_MCP_TOKEN_FILE: /run/tara-mcp/tokens.json
+      TARA_MCP_PROCESSED_DATA_DIR: /data/processed
+      TARA_MCP_MAX_CONCURRENT: "2"
+      TARA_MCP_REQUESTS_PER_MINUTE: "60"
+      TARA_MCP_MAX_REQUEST_BYTES: "65536"
+    volumes:
+      - type: bind
+        source: ${TARA_MCP_PROCESSED_DIR:?Set prepared core data path}
+        target: /data/processed
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${TARA_MCP_AUTH_DIR:?Set protected token registry directory}
+        target: /run/tara-mcp
+        read_only: true
+        bind: {create_host_path: false}
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    cpus: 0.75
+    pids_limit: 128
+    stop_grace_period: 120s
+    healthcheck:
+      test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8012/healthz', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      options: {max-size: "10m", max-file: "3"}

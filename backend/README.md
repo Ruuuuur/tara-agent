@@ -81,14 +81,13 @@ uv run tara-data --force
 
 ### 独立使用 MCP
 
-网页分析时，API 已在进程内连接 MCP 工具，无需额外启动 MCP 服务。只有外部 MCP 客户端需要独立连接时，才在持有派生数据的服务器 `backend/` 使用下列命令。该入口直接读取配置的数据目录，不使用远程HTTP网关；无本机数据的开发者无需启动它：
+网页分析时 API 已在进程内连接 MCP。外部 AI 客户端可复用标准 stdio 入口，无需模型密钥或 PostgreSQL：
 
-```powershell
-# 通过标准输入输出提供当前已接入的只读分析工具。
-uv run tara-mcp
+```bash
+uv run tara-mcp --processed-data-dir '<已准备的核心派生目录>' --core-only
 ```
 
-MCP 层校验参数并调用分析服务，不直接实现算法。模型不能执行任意 Python、Shell 或 SQL。
+本机和 SSH 配置、MATOU 启用条件、来源目录、错误契约及独立客户端验收，见 [MCP 接入说明](../MCP接入说明.md)。该入口直接读取所在主机的数据目录；只有远程 HTTP 数据网关的本地开发者可通过 SSH 在持有数据的服务器启动它。MCP 只校验和适配，不执行任意 Python、Shell 或 SQL。
 
 ## 工作流、会话与分析记录
 
@@ -359,3 +358,5 @@ API、进程内 MCP 与远程数据服务使用相同的契约和统一 Trace。
 不宣称复刻作者 BWA、去重及 RNA 处理流程，不将结果称作作者原始 RPKM。
 已完成真实ENA头部小样本下载、候选参考生信端到端、相关软件测试及隔离API自然语言问答。
 当前严格筛选后候选比对为零，不解释成生物学缺失；公网生产切换和浏览器展示仍须验收。
+
+公网 MCP 采用独立 `tara_agent.mcp.http:create_app` Streamable HTTP 入口，按用户签发 Bearer 令牌；认证、限制、客户端与独立容器部署见根目录 [MCP接入说明.md](../MCP接入说明.md)。无需网站数据库或模型密钥。

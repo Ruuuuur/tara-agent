@@ -267,3 +267,26 @@ DNA试点将输入改为`plans/metag-head-10000.json`、`sampled-metag`及独立
 基于`Ruuuuur/tara-agent`当前核验的主分支。没有该仓库直接写权限时，推送到自己的fork后
 向`Ruuuuur/tara-agent:main`创建PR；先保持草稿，待Docker、生信端到端和隔离网页验收后再请求合并。
 合并代码不会自动上传数据、构建镜像或启用网站上的工具，这些是独立部署步骤。
+
+## 外部 MCP 服务
+
+在已有生产 Compose 中叠加 `deploy/compose.mcp.yaml`，设置 `TARA_MCP_IMAGE`（含本次已验证代码的后端镜像）、`TARA_MCP_PUBLIC_URL`（HTTPS 地址，路径必须为 `/mcp`）、`TARA_MCP_PROCESSED_DIR` 和 `TARA_MCP_AUTH_DIR`。保护令牌目录，令其由容器运行 UID 读取；挂载整个目录保证管理命令原子替换注册表后立即生效。不要把认证文件放进现有 Caddy 的配置挂载目录。先离线签发访问令牌，再启动服务：
+
+```bash
+docker compose -f compose.yaml -f compose.mcp.yaml up -d --no-deps mcp
+```
+
+单进程限制是并发与速率计数的前提，不可直接增加 workers 或复制容器。独立容器限制 768 MiB、0.75 CPU；核心数据只读，无模型/数据库 env_file，不对宿主机发布额外端口。健康失败可观察；进程退出自动重启，Docker 重启后恢复服务。此首批配置仅挂载核心数据，不给外部客户端任意文件、Shell 或 SQL 能力。
+
+在同一 Docker 网络中的 Caddy 公网站点，放在现有 catch-all handle 之前，并保持所有其他站点配置：
+
+```caddyfile
+handle /mcp {
+    request_body { max_size 64KiB }
+    reverse_proxy mcp:8012
+}
+```
+
+先 `caddy validate`，再热加载。不要开放公网 `/healthz`，不要启用记录 Authorization 的访问日志。保存原 Compose/Caddyfile 及镜像版本以供回退；移除 `/mcp` 路由并停用 `mcp` 服务即可撤回，原网站和数据不变。凭据注册表属于访问控制配置，应备份在受保护位置；处理后科学数据沿用原备份，不为 MCP 再复制一份。
+
+验收必须从服务器外通过有效 TLS 连接，检查无令牌/错误/过期/撤销 401、非法来源和超大请求拒绝、HTTP 429 及恢复、工具发现和来源资源，并比较 MCP 返回与同版本分析服务的完整科学结果。公网验收不调用外部 LLM，不把真实数据额外发送给模型供应商。具体接入边界见根目录 MCP接入说明.md。
