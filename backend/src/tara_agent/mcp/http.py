@@ -6,6 +6,7 @@ import math
 import time
 from collections import deque
 from pathlib import Path
+from typing import Literal
 
 from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import Field, HttpUrl
@@ -22,7 +23,8 @@ from tara_agent.mcp.tokens import load_registry
 class HTTPSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="TARA_MCP_", extra="ignore")
     public_url: HttpUrl
-    token_file: Path
+    auth_mode: Literal["bearer", "none"] = "bearer"
+    token_file: Path | None = None
     processed_data_dir: Path
     matou_data_dir: Path | None = None
     max_concurrent: int = Field(default=2, ge=1, le=8)
@@ -31,7 +33,7 @@ class HTTPSettings(BaseSettings):
 
 
 class AccessBoundary:
-    """单进程有界入口：所有 MCP 方法认证，忙时立即拒绝，不排队积累任务。"""
+    """单进程有界入口：支持令牌或匿名访问，忙时立即拒绝，不排队积累任务。"""
 
     def __init__(self, app: ASGIApp, settings: HTTPSettings):
         self.app = app
@@ -39,7 +41,10 @@ class AccessBoundary:
         self.active = 0
         self.active_clients: set[str] = set()
         self.windows: dict[str, deque[float]] = {}
-        load_registry(settings.token_file)  # 缺失或损坏的注册表不允许启动。
+        if settings.auth_mode == "bearer":
+            if settings.token_file is None:
+                raise ValueError("Bearer authentication requires TARA_MCP_TOKEN_FILE")
+            load_registry(settings.token_file)  # 认证启用时必须有有效注册表。
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -51,34 +56,41 @@ class AccessBoundary:
         if scope["path"] != "/mcp":
             await JSONResponse({"error": "not_found"}, status_code=404)(scope, receive, send)
             return
-        headers = {k.lower(): v for k, v in scope["headers"]}
-        authorization = headers.get(b"authorization", b"").decode("latin-1")
-        scheme, _, token = authorization.partition(" ")
-        identity = None
-        try:
-            registry = load_registry(self.settings.token_file)
-            if scheme.lower() == "bearer" and 20 <= len(token) <= 256:
-                digest = hashlib.sha256(token.encode()).hexdigest()
-                for item in registry.tokens:
-                    if hmac.compare_digest(item.sha256, digest) and item.expires_at > time.time():
-                        identity = item.client_id
-        except (OSError, ValueError):
-            await JSONResponse({"error": "authentication_unavailable"}, status_code=503)(
-                scope, receive, send
-            )
-            return
-        if identity is None:
-            await JSONResponse(
-                {"error": "invalid_token"},
-                status_code=401,
-                headers={
-                    "WWW-Authenticate": 'Bearer realm="tara-mcp"',
-                    "Cache-Control": "no-store",
-                },
-            )(scope, receive, send)
-            return
-        # 仅为注册表内身份保留限流状态；撤销后不留下无限增长的内存键。
-        valid_ids = {item.client_id for item in registry.tokens}
+        if self.settings.auth_mode == "none":
+            identity = "anonymous"
+            valid_ids = {identity}
+        else:
+            headers = {k.lower(): v for k, v in scope["headers"]}
+            authorization = headers.get(b"authorization", b"").decode("latin-1")
+            scheme, _, token = authorization.partition(" ")
+            identity = None
+            try:
+                registry = load_registry(self.settings.token_file)
+                if scheme.lower() == "bearer" and 20 <= len(token) <= 256:
+                    digest = hashlib.sha256(token.encode()).hexdigest()
+                    for item in registry.tokens:
+                        if (
+                            hmac.compare_digest(item.sha256, digest)
+                            and item.expires_at > time.time()
+                        ):
+                            identity = item.client_id
+            except (OSError, ValueError):
+                await JSONResponse({"error": "authentication_unavailable"}, status_code=503)(
+                    scope, receive, send
+                )
+                return
+            if identity is None:
+                await JSONResponse(
+                    {"error": "invalid_token"},
+                    status_code=401,
+                    headers={
+                        "WWW-Authenticate": 'Bearer realm="tara-mcp"',
+                        "Cache-Control": "no-store",
+                    },
+                )(scope, receive, send)
+                return
+            valid_ids = {item.client_id for item in registry.tokens}
+        # 匿名访问共用一个速率窗口；令牌模式只保留有效注册身份的窗口。
         self.windows = {k: v for k, v in self.windows.items() if k in valid_ids}
         window = self.windows.setdefault(identity, deque())
         now = time.monotonic()
@@ -91,7 +103,8 @@ class AccessBoundary:
         # GET/DELETE 在无会话模式下由 SDK 返回 405；不长时间占用科学计算槽。
         limited = scope["method"] == "POST"
         if limited and (
-            self.active >= self.settings.max_concurrent or identity in self.active_clients
+            self.active >= self.settings.max_concurrent
+            or (self.settings.auth_mode == "bearer" and identity in self.active_clients)
         ):
             await self._busy(scope, receive, send, "server_busy", 3)
             return

@@ -359,4 +359,4 @@ API、进程内 MCP 与远程数据服务使用相同的契约和统一 Trace。
 已完成真实ENA头部小样本下载、候选参考生信端到端、相关软件测试及隔离API自然语言问答。
 当前严格筛选后候选比对为零，不解释成生物学缺失；公网生产切换和浏览器展示仍须验收。
 
-公网 MCP 采用独立 `tara_agent.mcp.http:create_app` Streamable HTTP 入口，按用户签发 Bearer 令牌；认证、限制、客户端与独立容器部署见根目录 [MCP接入说明.md](../MCP接入说明.md)。无需网站数据库或模型密钥。
+公网 MCP 采用独立 `tara_agent.mcp.http:create_app` Streamable HTTP 入口，当前生产显式设置匿名模式（`TARA_MCP_AUTH_MODE=none`）；可选 Bearer 认证、限制、客户端与独立容器部署见根目录 [MCP接入说明.md](../MCP接入说明.md)。无需网站数据库或模型密钥。

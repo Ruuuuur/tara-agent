@@ -120,29 +120,39 @@ uv run pytest tests/test_mcp.py tests/test_mcp_external.py
 
 ## 公网 Streamable HTTP 接入
 
-外部用户不必登录云服务器。维护者分别签发令牌，用户在支持自定义 HTTP 请求头的 MCP 客户端中配置 HTTPS `/mcp` 地址和 `Authorization: Bearer <令牌>`；模板见 `backend/examples/mcp/http.example.json`。不同客户端配置字段可能不同，不能直接把此模板用于所有客户端。令牌等同该用户的访问凭证，不贴到聊天、Git、截图或日志中。
+当前公网入口按维护者选择使用匿名访问：`https://175.27.144.33/mcp`，无需 Bearer Token，无需网站账号。外部用户可在支持 Streamable HTTP 的 MCP 客户端中填写该地址；模板见 `backend/examples/mcp/http.example.json`。不同客户端配置字段可能不同，目标客户端仍需单独验收。此地址是协议接口，浏览器直接打开可能返回 405，不是网站页面。
 
-此入口提供 MCP 工具发现、调用和来源资源，使用官方 SDK Streamable HTTP，无状态 JSON 响应；兼容现代发现和经典 initialize。当前不提供 OAuth 登录与动态客户端注册；仅接受 OAuth 的客户端暂不能直接连接，确定目标客户端后再增加经验证的授权方式。网页账号密码不能替代 MCP 令牌。
+```json
+{"mcpServers":{"tara":{"url":"https://175.27.144.33/mcp"}}}
+```
+
+匿名模式显式设置 `TARA_MCP_AUTH_MODE=none`，不加载令牌注册表，旧客户端即便仍带 Authorization 头也可调用；请求头不会成为绕过限流的新身份。任何知道地址的人均可调用当前公开的工具。入口使用官方 SDK Streamable HTTP、无状态 JSON 响应，兼容现代发现和经典 initialize。未实现 OAuth 登录或动态客户端注册；仅接受 OAuth 的客户端仍需单独适配。
 
 首批公网部署只挂载核心处理后数据，开放七个已验收核心查询/计算工具；MATOU、论文功能研究及 raw reads 不随此部署自动公开。可在后续资源评估与资料验收后，通过 `TARA_MCP_MATOU_DATA_DIR` 和只读挂载启用 MATOU 能力。原 stdio 服务继续支持可选 MATOU 与完成的 reads 任务查询，网站能力不受影响。
 
-每个令牌默认有效 90 天，最多 365 天，每个身份每分钟 60 个 HTTP 请求（含发现和失败请求），同时至多一个 POST；实例总计至多两个 POST。忙时立即返回 HTTP 429 和 Retry-After，客户端稍后重试，不无限排队。单请求体 64 KiB，Host/Origin 验证由 MCP SDK 执行。缺失、错误、过期或已撤销令牌返回 401；损坏的凭据注册表返回 503 并拒绝访问。删除注册表内的令牌立即阻止其后续请求，已执行的计算不会被强制中断。
+匿名请求共用每分钟 60 个 HTTP 请求的总限额（含发现和失败请求），实例总计至多两个 POST。忙时返回 HTTP 429 和 Retry-After，客户端稍后重试，不无限排队。限额按整个入口计数，不依赖可伪造的 X-Forwarded-For 或任意 Authorization；没有逐用户撤销能力。单请求体 64 KiB，Host/Origin 验证由 MCP SDK 执行。服务不提供浏览器跨域 CORS 授权，浏览器网页客户端须独立适配。
 
-服务只保存令牌 SHA-256 摘要，不持久化明文。管理者在受保护目录依次执行管理命令，注册表和明文输出文件权限为 0600，目录为 0700。为不同外部用户签发不同 client_id，不共用一个令牌。
+`/healthz` 仅用于容器健康检查，不代理到公网。MCP 不读取网站数据库或模型 API Key，也不产生网页会话历史；返回的 provenance 和来源资源仍须保留。容器内存不足可能终止该 MCP 进程，由 restart 策略重启；不承诺当前 2核4G 支持任意高并发或所有高成本计算。
+
+### 可选恢复令牌认证
+
+程序保留 Bearer 模式供维护者恢复访问控制：`TARA_MCP_AUTH_MODE=bearer`（程序默认值）、`TARA_MCP_TOKEN_FILE=/run/tara-mcp/tokens.json`，并只读挂载受保护的整个注册表目录。Bearer 模式缺失或损坏注册表不得启动，不会静默降级为匿名。生产匿名 Compose 则不挂载此目录。
+
+维护者离线签发不同 client_id 的令牌，服务端只保存 SHA-256 摘要。默认 90 天、最多 365 天；撤销立即阻止后续请求，已执行计算不会强制中断。注册表和明文输出文件权限 0600，目录 0700，令牌不贴入 Git、截图或日志。
 
 ```bash
 python -m tara_agent.mcp.tokens --registry /PRIVATE/tokens.json create alice --output /PRIVATE/alice.token --days 90
 python -m tara_agent.mcp.tokens --registry /PRIVATE/tokens.json revoke alice
 ```
 
-`/healthz` 仅用于容器健康检查，不代理到公网。MCP 不读取网站数据库或模型 API Key，也不产生网页会话历史；返回的 provenance 和来源资源仍须保留。容器内存不足可能终止该 MCP 进程，由 restart 策略重启；不承诺当前 2核4G 支持任意高并发或所有高成本计算。
+Bearer 模式每个身份每分钟 60 个请求，同时至多一个 POST，实例总计至多两个 POST。缺失、错误、过期或撤销令牌返回 401；运行期注册表损坏返回 503。此规则只适用于明确开启的 Bearer 模式，不适用于当前匿名公网入口。
 
-部署和回退见 [deploy/README.md](deploy/README.md)。
+### HTTP 验收
 
-HTTP 配置也可用同一个验收入口（配置文件需为仅本人可读）：
+匿名配置也可用同一个验收入口：
 
 ```bash
-uv run python deploy/check_mcp.py --config /PRIVATE/client.private.json --output /PRIVATE/http-check.json
+uv run python deploy/check_mcp.py --config /PATH/client.json --output /PATH/http-check.json
 ```
 
-验收报告包含科学结果及来源，不包含配置中的 Authorization 请求头；不要把凭据配置本身当报告发布。
+验收报告包含科学结果及来源。部署和回退见 [deploy/README.md](deploy/README.md)。

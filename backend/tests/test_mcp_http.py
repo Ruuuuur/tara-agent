@@ -135,17 +135,20 @@ async def test_concurrency_and_rate(settings, credentials):
         assert int(response.headers["retry-after"]) >= 1
 
 
-@pytest.fixture
-def http_server(settings):
+@pytest.fixture(params=["bearer", "none"])
+def http_server(settings, request):
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     env = {
         **os.environ,
+        "TARA_MCP_AUTH_MODE": request.param,
         "TARA_MCP_PUBLIC_URL": str(settings.public_url),
         "TARA_MCP_TOKEN_FILE": str(settings.token_file),
         "TARA_MCP_PROCESSED_DATA_DIR": str(settings.processed_data_dir),
     }
+    if request.param == "none":
+        env.pop("TARA_MCP_TOKEN_FILE", None)
     process = subprocess.Popen(
         [
             sys.executable,
@@ -176,7 +179,7 @@ def http_server(settings):
             time.sleep(0.05)
         else:
             raise AssertionError("HTTP MCP did not start")
-        yield url + "/mcp"
+        yield url + "/mcp", request.param
     finally:
         process.terminate()
         process.communicate(timeout=10)
@@ -185,11 +188,11 @@ def http_server(settings):
 @pytest.mark.anyio
 @pytest.mark.parametrize("mode", ["auto", "legacy"])
 async def test_http_discovery_parity_recovery(http_server, credentials, processed, mode):
+    url, auth_mode = http_server
+    headers = {"Authorization": f"Bearer {credentials[1]}"} if auth_mode == "bearer" else {}
     async with (
-        httpx2.AsyncClient(
-            headers={"Authorization": f"Bearer {credentials[1]}"}, timeout=30, trust_env=False
-        ) as http,
-        Client(streamable_http_client(http_server, http_client=http), mode=mode) as client,
+        httpx2.AsyncClient(headers=headers, timeout=30, trust_env=False) as http,
+        Client(streamable_http_client(url, http_client=http), mode=mode) as client,
     ):
         assert len((await client.list_tools()).tools) == 7
         catalog = json.loads((await client.read_resource("tara://data/catalog")).contents[0].text)
@@ -218,3 +221,83 @@ def test_token_admin(tmp_path):
     assert output.stat().st_mode & 0o777 == 0o600
     subprocess.run([*command, "revoke", "alice"], capture_output=True, check=True)
     assert json.loads(registry.read_text()) == {"tokens": []}
+
+
+def test_anonymous_access_keeps_transport_checks(settings):
+    settings.auth_mode = "none"
+    settings.token_file = None
+    headers = {
+        "accept": "application/json, text/event-stream",
+        "mcp-protocol-version": "2025-11-25",
+    }
+    msg = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+    with TestClient(build_app(settings)) as client:
+        for auth in ({}, {"Authorization": "Bearer obsolete"}):
+            response = client.post("/mcp", json=msg, headers={**headers, **auth})
+            assert response.status_code == 200
+            assert len(response.json()["result"]["tools"]) == 7
+            assert "www-authenticate" not in response.headers
+        assert (
+            client.post(
+                "/mcp", json=msg, headers={**headers, "Origin": "https://evil.test"}
+            ).status_code
+            == 403
+        )
+        assert (
+            client.post("/mcp", json=msg, headers={**headers, "Host": "evil.test"}).status_code
+            == 421
+        )
+        assert (
+            client.post(
+                "/mcp",
+                content=b"x" * 70000,
+                headers={**headers, "content-type": "application/json"},
+            ).status_code
+            == 413
+        )
+
+
+@pytest.mark.anyio
+async def test_anonymous_global_concurrency_and_rate(settings):
+    settings.auth_mode = "none"
+    settings.token_file = None
+    entered, release = anyio.Event(), anyio.Event()
+    count = 0
+
+    async def slow(scope, receive, send):
+        nonlocal count
+        count += 1
+        if count == 2:
+            entered.set()
+        await release.wait()
+        await JSONResponse({"ok": True})(scope, receive, send)
+
+    app = AccessBoundary(slow, settings)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="https://testserver"
+    ) as client:
+
+        async def first():
+            assert (await client.post("/mcp")).status_code == 200
+
+        async with anyio.create_task_group() as group:
+            group.start_soon(first)
+            group.start_soon(first)
+            await entered.wait()
+            assert app.active == 2
+            response = await client.post("/mcp", headers={"X-Forwarded-For": "203.0.113.7"})
+            assert response.status_code == 429 and response.json()["error"] == "server_busy"
+            release.set()
+        assert app.active == 0
+        app.windows["anonymous"].extend([time.monotonic()] * settings.requests_per_minute)
+        response = await client.post(
+            "/mcp", headers={"Authorization": "Bearer spoofed", "X-Forwarded-For": "198.51.100.2"}
+        )
+        assert response.status_code == 429 and response.json()["error"] == "rate_limited"
+        assert set(app.windows) == {"anonymous"}
+
+
+def test_bearer_requires_registry(settings):
+    settings.token_file = None
+    with pytest.raises(ValueError, match="TARA_MCP_TOKEN_FILE"):
+        build_app(settings)
