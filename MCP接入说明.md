@@ -126,7 +126,7 @@ uv run pytest tests/test_mcp.py tests/test_mcp_external.py
 {"mcpServers":{"tara":{"url":"https://175.27.144.33/mcp"}}}
 ```
 
-匿名模式显式设置 `TARA_MCP_AUTH_MODE=none`，不加载令牌注册表，旧客户端即便仍带 Authorization 头也可调用；请求头不会成为绕过限流的新身份。任何知道地址的人均可调用当前公开的工具。入口使用官方 SDK Streamable HTTP、无状态 JSON 响应，兼容现代发现和经典 initialize。未实现 OAuth 登录或动态客户端注册；仅接受 OAuth 的客户端仍需单独适配。
+匿名模式显式设置 `TARA_MCP_AUTH_MODE=none`，不加载令牌注册表，旧客户端即便仍带 Authorization 头也可调用；请求头不会成为绕过限流的新身份。任何知道地址的人均可调用当前公开的工具。入口使用官方 SDK Streamable HTTP、无状态 JSON 响应，兼容现代发现和经典 initialize。仅处理 POST；GET、DELETE 和 HEAD 明确返回 405，不建立常驻 SSE 连接。未实现 OAuth 登录或动态客户端注册；仅接受 OAuth 的客户端仍需单独适配。
 
 首批公网部署只挂载核心处理后数据，开放七个已验收核心查询/计算工具；MATOU、论文功能研究及 raw reads 不随此部署自动公开。可在后续资源评估与资料验收后，通过 `TARA_MCP_MATOU_DATA_DIR` 和只读挂载启用 MATOU 能力。原 stdio 服务继续支持可选 MATOU 与完成的 reads 任务查询，网站能力不受影响。
 

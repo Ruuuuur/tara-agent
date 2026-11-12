@@ -71,6 +71,9 @@ def test_auth_security_revocation(settings, credentials):
             response = client.request(method, "/mcp", headers={"Authorization": "Bearer wrong"})
             assert response.status_code == 401
         assert client.post("/mcp", json=msg, headers=headers).status_code == 200
+        for method in ("GET", "DELETE", "HEAD"):
+            response = client.request(method, "/mcp", headers=headers)
+            assert response.status_code == 405 and response.headers["allow"] == "POST"
         response = client.post("/mcp", json=msg, headers={**headers, "Origin": "https://evil.test"})
         assert response.status_code == 403
         response = client.post("/mcp", json=msg, headers={**headers, "Host": "evil.test"})
@@ -232,6 +235,9 @@ def test_anonymous_access_keeps_transport_checks(settings):
     }
     msg = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
     with TestClient(build_app(settings)) as client:
+        for method in ("GET", "DELETE", "HEAD"):
+            response = client.request(method, "/mcp", headers=headers)
+            assert response.status_code == 405 and response.headers["allow"] == "POST"
         for auth in ({}, {"Authorization": "Bearer obsolete"}):
             response = client.post("/mcp", json=msg, headers={**headers, **auth})
             assert response.status_code == 200

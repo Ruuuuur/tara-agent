@@ -100,8 +100,13 @@ class AccessBoundary:
             await self._busy(scope, receive, send, "rate_limited", math.ceil(60 - now + window[0]))
             return
         window.append(now)
-        # GET/DELETE 在无会话模式下由 SDK 返回 405；不长时间占用科学计算槽。
-        limited = scope["method"] == "POST"
+        # 本入口只返回无状态 JSON，不开放无用途的常驻 GET/SSE 连接。
+        if scope["method"] != "POST":
+            await JSONResponse(
+                {"error": "method_not_allowed"}, status_code=405, headers={"Allow": "POST"}
+            )(scope, receive, send)
+            return
+        limited = True
         if limited and (
             self.active >= self.settings.max_concurrent
             or (self.settings.auth_mode == "bearer" and identity in self.active_clients)
